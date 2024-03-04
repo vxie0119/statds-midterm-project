@@ -30,64 +30,82 @@ and `INSPECTION_TYPE` is either `Initial` or `Compliance` (which
 should be about 108 MB). Read the meta data information
 to understand the data.
 
-1. Data cleaning.
-    + There are two zipcode columns: `ZIP_CODE` and `Zipcodes`.
-      Which one represent the zipcode of the inspection site? 
-      Comment on the data dictionary.
+## Data Initialization
+```{python}
+# Importing packages and dataset
+import pandas as pd
 
-    + Summarize the missing information. Are their missing values
-      that can be filled using other columns? Fill in those values.
+data = pd.read_csv("./Rodent_Inspection_Data.csv")
 
-    + Are their redundant information in the data? Try storing
-      the data using `arrow` and comment on the efficiency gain.
+# Listing the columns in vertical order
+columns = data.columns.to_series().reset_index(drop=True)
+columns
 
-    + Are there invalid zipcode or borough? Justify and clean
-      them up if yes.
+```
 
-2. Data exploration.
-    + Create binary variable `passing` indicating passing or
-      not for the inspection result. Does `passing` depend on
-      whether the inspection is initial or compliance? State
-      your hypothesis and summarize your test result.
+## Data cleaning.
++ There are two zipcode columns: `ZIP_CODE` and `Zipcodes`.
+  Which one represent the zipcode of the inspection site? 
+  Comment on the data dictionary.
 
-    + Are the passing pattern different across different
-      boroughs for initial inspections? How about compliance
-      inspections? State your hypothesis and summarize your
-      test results.
+The column `ZIP_CODE` represents the actual zipcode of the inspection site. When reviewing some of the `Zipcodes` values, I saw that some of them were from different states. Based on the data dictionary, I did not see `Zipcodes` in that file. 
 
-    + If we suspect that the passing rate may depends on
-      the time of a day of the inspection, we may compare
-      the passting rates for inspections done in the mornings
-      and inspections one in the afternoons. Visualize the
-      comparison by borough and inspection type.
++ Summarize the missing information. Are their missing values
+  that can be filled using other columns? Fill in those values.
 
-    + Perform a formal hypothesis test to confirm the
-      observations from your visualization.
++ Are their redundant information in the data? Try storing
+  the data using `arrow` and comment on the efficiency gain.
 
-3. Data analytics.
-    + Aggregate the inspections by zip code to create
-      a dataset with five columns. The first three columns are
-      `zipcode`; `n_initial`, the
-      count of the initial inspections in that zipcode; and 
-      `n_initpass`, the number of initial inspections with a
-      passing result in that zipcode. The other two variables
-      are `n_compliance` and `n_comppass`, the counterpart
-      for compliance inspections.
++ Are there invalid zipcode or borough? Justify and clean
+  them up if yes.
 
-    + Add a variable to your dataset, `n_sighting`, which
-      represent the number of rodent sightings from the 311
-      service request data in the same 2022-2023 period.
+## Data exploration.
 
-    + Merge your dataset with the simple zipcode table in
-      package `uszipcode` by zipcode to obtain demographic
-      and socioeconomic variables at the zipcode level.
-      
-    + Build a binomial regression for the passing rate of initial
-      inspections at the zipcode level. Assess the goodness-of-fit
-      of your model. Summarize your results to a New Yorker
-      who is not data science savvy.
++ Create binary variable `passing` indicating passing or
+  not for the inspection result. Does `passing` depend on
+  whether the inspection is initial or compliance? State
+  your hypothesis and summarize your test result.
 
-4. Now you know the data quite well. Come up with a research
++ Are the passing pattern different across different
+  boroughs for initial inspections? How about compliance
+  inspections? State your hypothesis and summarize your
+  test results.
+
++ If we suspect that the passing rate may depends on
+  the time of a day of the inspection, we may compare
+  the passting rates for inspections done in the mornings
+  and inspections one in the afternoons. Visualize the
+  comparison by borough and inspection type.
+
++ Perform a formal hypothesis test to confirm the
+  observations from your visualization.
+
+## Data analytics.
++ Aggregate the inspections by zip code to create
+  a dataset with five columns. The first three columns are
+  `zipcode`; `n_initial`, the
+  count of the initial inspections in that zipcode; and 
+  `n_initpass`, the number of initial inspections with a
+  passing result in that zipcode. The other two variables
+  are `n_compliance` and `n_comppass`, the counterpart
+  for compliance inspections.
+
++ Add a variable to your dataset, `n_sighting`, which
+  represent the number of rodent sightings from the 311
+  service request data in the same 2022-2023 period.
+
++ Merge your dataset with the simple zipcode table in
+  package `uszipcode` by zipcode to obtain demographic
+  and socioeconomic variables at the zipcode level.
+
++ Build a binomial regression for the passing rate of initial
+  inspections at the zipcode level. Assess the goodness-of-fit
+  of your model. Summarize your results to a New Yorker
+  who is not data science savvy.
+
+##  Research Question
+
+   Now you know the data quite well. Come up with a research
    question of interest that can be answered by the data, which
    could be analytics or visualizations. Perform the needed
    analyses and answer your question.
