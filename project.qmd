@@ -11,7 +11,7 @@ format:
       - left=20mm
 ---
 
-# **Midterm Project: Rodents in NYC** {.unnumbered}
+# **Midterm Project: Rodents in NYC** 
 
 [Rodents in NYC](https://en.wikipedia.org/wiki/Rats_in_New_York_City)
 are widespread, as they are in many densely populated areas. As of
@@ -40,68 +40,76 @@ data = pd.read_csv("./Rodent_Inspection_Data.csv")
 # Listing the columns in vertical order
 columns = data.columns.to_series().reset_index(drop=True)
 columns
-
 ```
 
 ## Data cleaning.
-+ There are two zipcode columns: `ZIP_CODE` and `Zipcodes`.
+
++ **There are two zipcode columns: `ZIP_CODE` and `Zipcodes`.
   Which one represent the zipcode of the inspection site? 
-  Comment on the data dictionary.
+  Comment on the data dictionary.**
 
-The column `ZIP_CODE` represents the actual zipcode of the inspection site. When reviewing some of the `Zipcodes` values, I saw that some of them were from different states. Based on the data dictionary, I did not see `Zipcodes` in that file. 
+The column `ZIP_CODE` represents the actual zipcode of the inspection site. When reviewing some of the `Zipcodes` values, I saw that some of them were from different states. Based on the data dictionary, I did not see `Zipcodes` in that file. From this, I can assume that there is no importance with the `Zipcodes` column. 
 
-+ Summarize the missing information. Are their missing values
-  that can be filled using other columns? Fill in those values.
++ **Summarize the missing information. Are their missing values
+  that can be filled using other columns? Fill in those values.**
+```{python}
+# Checking for missing values in each column
+missing_info = data.isnull().sum()
 
-+ Are their redundant information in the data? Try storing
-  the data using `arrow` and comment on the efficiency gain.
+# Summarizing the missing information
+missing_info_summary = missing_info[missing_info > 0].sort_values(ascending=False)
+missing_info_summary
+```
 
-+ Are there invalid zipcode or borough? Justify and clean
-  them up if yes.
++ **Are their redundant information in the data? Try storing
+  the data using `arrow` and comment on the efficiency gain.**
+
++ **Are there invalid zipcode or borough? Justify and clean
+  them up if yes.**
 
 ## Data exploration.
 
-+ Create binary variable `passing` indicating passing or
++ **Create binary variable `passing` indicating passing or
   not for the inspection result. Does `passing` depend on
   whether the inspection is initial or compliance? State
-  your hypothesis and summarize your test result.
+  your hypothesis and summarize your test result.**
 
-+ Are the passing pattern different across different
++ **Are the passing pattern different across different
   boroughs for initial inspections? How about compliance
   inspections? State your hypothesis and summarize your
-  test results.
+  test results.**
 
-+ If we suspect that the passing rate may depends on
++ **If we suspect that the passing rate may depends on
   the time of a day of the inspection, we may compare
   the passting rates for inspections done in the mornings
   and inspections one in the afternoons. Visualize the
-  comparison by borough and inspection type.
+  comparison by borough and inspection type.**
 
-+ Perform a formal hypothesis test to confirm the
-  observations from your visualization.
++ **Perform a formal hypothesis test to confirm the
+  observations from your visualization.**
 
 ## Data analytics.
-+ Aggregate the inspections by zip code to create
++ **Aggregate the inspections by zip code to create
   a dataset with five columns. The first three columns are
   `zipcode`; `n_initial`, the
   count of the initial inspections in that zipcode; and 
   `n_initpass`, the number of initial inspections with a
   passing result in that zipcode. The other two variables
   are `n_compliance` and `n_comppass`, the counterpart
-  for compliance inspections.
+  for compliance inspections.**
 
-+ Add a variable to your dataset, `n_sighting`, which
++ **Add a variable to your dataset, `n_sighting`, which
   represent the number of rodent sightings from the 311
-  service request data in the same 2022-2023 period.
+  service request data in the same 2022-2023 period.**
 
-+ Merge your dataset with the simple zipcode table in
++ **Merge your dataset with the simple zipcode table in
   package `uszipcode` by zipcode to obtain demographic
-  and socioeconomic variables at the zipcode level.
+  and socioeconomic variables at the zipcode level.**
 
-+ Build a binomial regression for the passing rate of initial
++ **Build a binomial regression for the passing rate of initial
   inspections at the zipcode level. Assess the goodness-of-fit
   of your model. Summarize your results to a New Yorker
-  who is not data science savvy.
+  who is not data science savvy.**
 
 ##  Research Question
 
