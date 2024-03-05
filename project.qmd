@@ -34,6 +34,7 @@ to understand the data.
 ```{python}
 # Importing packages and dataset
 import pandas as pd
+import pyarrow
 
 data = pd.read_csv("./Rodent_Inspection_Data.csv")
 
@@ -61,8 +62,46 @@ missing_info_summary = missing_info[missing_info > 0].sort_values(ascending=Fals
 missing_info_summary
 ```
 
+- X_COORD and Y_COORD: (fix) There are many cases where the X and Y coordinates are missing. This can be filled in using the `Location` column. If the `Location` column is missing, we can take the `HOUSE_NUMBER`, `STREET_NAME`, `ZIP_CODE` to reverse geocode and find the X and Y coordinates.
+
+- Zipcodes: This column has many missing values and incorrect values. The data dictionary does not define the intended use of this column so this is a column we can consider storing.
+
+- Borough Boundaries: From the data, we see that the `Borough Boundaries` column has a number associated with a specific borough. We see that:
+
+    - Staten Island = 1
+    - Brooklyn = 2
+    - Queens = 3 
+    - Manhattan = 4
+    - Bronx = 5
+
+The values in this column can easily be filled in based on what the `Borough` value is.
+
+- Police Precinct, Community Districts, City Council District: There are an equal number of values that are missing. These values would also be quite difficult to fill in and do not seem to have a purpose in the dataset. We can consider storing these values.
+
+- BIN:
+
+- BBL: The Borough, Block, Lot number (BBL) has the same number of missing values as the Building Identification Number (BIN). We see that there are no missing values for `BORO_CODE`, `BLOCK`, and `LOT` so we can use these values to fill in the BBL.
+
+- Community Board, Council District, Census Tract: There are 10,304 missing values in each of these columns. It is difficult to use information from other columns to fill in the data. In terms of significance for the overall project, it would be best to consider storing these columns.
+
+- NTA: The Neighborhood Tabulation Area cannot be filled using other columns. It would be difficult to fill in the values unless we access a different dataset.
+
+- Location, Latitude, Longitude: With these missing values, they can be used to find each other. If both `Location` and both `Latitude` and `Longitude` values are missing, we can use the `Street Name` and `House Name` to potentially locate all of the missing information. `ZIP_CODE` is also another column that may help our investigation.
+
+- ZIP_CODE: By using information from the `Location` and  `Street Name` column, we can locate the zipcode using a geospatial python package.
+
+- HOUSE_NUMBER:
+
+- STREET_NAME:
+
+- RESULT:
+
+- BOROUGH:
+
 + **Are their redundant information in the data? Try storing
   the data using `arrow` and comment on the efficiency gain.**
+
+From the previous part
 
 + **Are there invalid zipcode or borough? Justify and clean
   them up if yes.**
