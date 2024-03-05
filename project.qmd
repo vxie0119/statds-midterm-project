@@ -37,6 +37,9 @@ import pandas as pd
 #import pyarrow
 from uszipcode import SearchEngine
 import warnings
+from arcgis.geocoding import reverse_geocode
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 
 # Suppress all warnings
 warnings.filterwarnings('ignore')
@@ -334,14 +337,49 @@ for index, row in clean.iterrows():
         if pd.notnull(row['LATITUDE']) and pd.notnull(row['LONGITUDE']):
             zip_code = get_zipcode(row['LATITUDE'], row['LONGITUDE'])
             clean.at[index, 'ZIP_CODE'] = zip_code
-            
+
 # Save the updated dataset
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 ```
 
-- HOUSE_NUMBER:
+- HOUSE_NUMBER and STREET_NAME:
+```{python}
+# Initialize the geocoder
+geolocator = Nominatim(user_agent="Project")
 
-- STREET_NAME:
+# Function to perform reverse geocoding
+def reverse_geocode(lat, lon):
+    try:
+        # Get location information
+        location = geolocator.reverse((lat, lon), exactly_one=True)
+        if location:
+            address = location.raw.get('address', {})
+            # Extract house number and street name
+            house_number = address.get('house_number', None)
+            street_name = address.get('road', None)
+            return house_number, street_name
+    except GeocoderTimedOut:
+        return None, None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None, None
+
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
+
+# Iterate over the DataFrame rows
+for index, row in clean.iterrows():
+    # Check if HOUSE_NUMBER and STREET_NAME need to be filled
+    if pd.isnull(row['HOUSE_NUMBER']) or pd.isnull(row['STREET_NAME']):
+        # Perform reverse geocoding if lat and lon are available
+        if pd.notnull(row['LATITUDE']) and pd.notnull(row['LONGITUDE']):
+            house_number, street_name = reverse_geocode(row['LATITUDE'], row['LONGITUDE'])
+            clean.at[index, 'HOUSE_NUMBER'] = house_number if house_number else row['HOUSE_NUMBER']
+            clean.at[index, 'STREET_NAME'] = street_name if street_name else row['STREET_NAME']
+
+# Save the updated dataset
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+```
 
 - RESULT:
 
@@ -412,3 +450,8 @@ original_size, parquet_size
    question of interest that can be answered by the data, which
    could be analytics or visualizations. Perform the needed
    analyses and answer your question.
+
+## References 
+
+* [GeoPy reference](https://stackoverflow.com/questions/60928516/get-address-from-given-coordinate-using-python)
+* [PLUTO data](https://data.cityofnewyork.us/City-Government/Primary-Land-Use-Tax-Lot-Output-PLUTO-/64uk-42ks/data)
