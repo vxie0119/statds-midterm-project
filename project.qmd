@@ -270,11 +270,42 @@ for col in columns_to_update.keys():
 merged_data.drop(['bbl', 'community board', 'council district', 'census tract 2010'], axis=1, inplace=True)
 
 # Save the merged dataset to a new CSV file
-merged_data.to_csv("./data/cleaned_rodent_inspection_with_pluto.csv", index=False)
+merged_data.to_csv("./data/cleaned_rodent_inspection.csv", index=False)
 ```
-- NTA: The Neighborhood Tabulation Area cannot be filled using other columns. It would be difficult to fill in the values unless we access a different dataset.
 
-- Location, Latitude, Longitude: With these missing values, they can be used to find each other. If both `Location` and both `Latitude` and `Longitude` values are missing, we can use the `Street Name` and `House Name` to potentially locate all of the missing information. `ZIP_CODE` is also another column that may help our investigation.
+- NTA: The Neighborhood Tabulation Area cannot be filled using other columns. It is also missing from the PLUTO dataset. I believe that this column is important as it provides a more specific name to the inspection location but I cannot fill in the missing values. If the dataset had included a column with `NTACode`, it would be a lot easier to fill in the missing NTA values. This [dataset](https://data.cityofnewyork.us/City-Government/2010-Neighborhood-Tabulation-Areas-NTAs-/cpf4-rkhq) will have the corresponding `NTACode` with `NTA` to fill in any missing values.
+
+- Location, Latitude, Longitude: There are not too many values that are missing but these values can all be filled in by using the BBL number to match the numbers. 
+
+```{python}
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
+
+# Ensure the BBL column is the same data type in both datasets
+clean['BBL'] = clean['BBL'].astype(int)
+pluto['bbl'] = pluto['bbl'].astype(int)
+
+# Merge the datasets on the BBL column
+merged_data = pd.merge(clean, pluto[['bbl', 'latitude', 'longitude']],
+                       left_on='BBL', right_on='bbl', how='left')
+
+# Fill in the missing latitude and longitude values
+merged_data['LATITUDE'] = merged_data['LATITUDE'].fillna(merged_data['latitude'])
+merged_data['LONGITUDE'] = merged_data['LONGITUDE'].fillna(merged_data['longitude']) 
+
+# Create a 'LOCATION' column by combining LATITUDE and LONGITUDE
+# Check if LATITUDE and LONGITUDE are not NaN before combining
+merged_data['LOCATION'] = merged_data.apply(
+    lambda row: f"({row['LATITUDE']}, {row['LONGITUDE']})"
+    if pd.notnull(row['LATITUDE']) and pd.notnull(row['LONGITUDE'])
+    else None, axis=1)
+
+# Drop the extra columns from pluto_data that are no longer needed
+merged_data.drop(['bbl', 'latitude', 'longitude'], axis=1, inplace=True)
+
+# Save the merged dataset to a new CSV file
+merged_data.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+```
 
 - ZIP_CODE: By using information from the `Location` and  `Street Name` column, we can locate the zipcode using a geospatial python package.
 
