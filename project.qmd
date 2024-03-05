@@ -35,8 +35,13 @@ to understand the data.
 # Importing packages and dataset
 import pandas as pd
 #import pyarrow
+import warnings
+
+# Suppress all warnings
+warnings.filterwarnings('ignore')
 
 data = pd.read_csv("./data/Rodent_Inspection_Data.csv")
+pluto = pd.read_csv("./data/PLUTO.csv")
 
 # Listing the columns in vertical order
 columns = data.columns.to_series().reset_index(drop=True)
@@ -45,13 +50,12 @@ columns
 
 ## Data cleaning
 
-+ **There are two zipcode columns: `ZIP_CODE` and `Zipcodes`.
-  Which one represent the zipcode of the inspection site? 
-  Comment on the data dictionary.**
+**There are two zipcode columns: `ZIP_CODE` and `Zipcodes`. Which one represent the zipcode of the inspection site? Comment on the data dictionary.**
 
 The column `ZIP_CODE` represents the actual zipcode of the inspection site. When reviewing some of the `Zipcodes` values, I saw that some of them were from different states. We see that `Zipcodes` may be based off where the building owner is located. Given the representation of the value, it would be best to remove the `Zipcodes` column as it is not important in the overall investigation. 
 
 Some key notes in the data dictionary:
+
 - If a property/taxlot does not appear on file, it does not indicate the absense of rats.
 - Neighborhoods with higher numbers of properties with active rat signs may not have higher rat populations. Just simply more inspections.
 - `INSPECTION_TYPE` and `JOB_TICKET_OR_WORK_ORDER_ID` are unique identifiers for records in the dataset. 
@@ -69,8 +73,7 @@ is_unique
 - `Latitude/Longitude` is in decimal degrees of the World Geodetic System (WGS84).
 
 
-+ **Summarize the missing information. Are their missing values
-  that can be filled using other columns? Fill in those values.**
+**Summarize the missing information. Are their missing values that can be filled using other columns? Fill in those values.**
 ```{python}
 # Checking for missing values in each column
 missing_info = data.isnull().sum()
@@ -80,6 +83,22 @@ missing_info_summary = missing_info[missing_info > 0].sort_values(ascending=Fals
 missing_info_summary
 ```
 
+- BBL: The Borough, Block, Lot number (BBL) has the same number of missing values as the Building Identification Number (BIN). We see that there are no missing values for `BORO_CODE`, `BLOCK`, and `LOT` so we can use these values to fill in the BBL.
+
+```{python}
+# Filling in every row in the BBL column with the boro_code, block, and lot numbers
+# The BBL is a concatenation of the borough code, block, and lot number
+
+# Function to concatenate boro_code, block, and lot to create the BBL
+def create_bbl(boro_code, block, lot):
+    return f"{boro_code}{block:05d}{lot:04d}"
+
+# Applying the function to each row where BBL is missing
+data.loc[data['BBL'].isnull(), 'BBL'] = data.apply(lambda row: create_bbl(row['BORO_CODE'], row['BLOCK'], row['LOT']) if pd.isnull(row['BBL']) else row['BBL'], axis=1)
+
+# Checking the first few rows to verify the changes
+data[['BORO_CODE', 'BLOCK', 'LOT', 'BBL']].head()
+```
 - X_COORD and Y_COORD: (fix) There are many cases where the X and Y coordinates are missing. This can be filled in using the `Location` column. If the `Location` column is missing, we can take the `HOUSE_NUMBER`, `STREET_NAME`, `ZIP_CODE` to reverse geocode and find the X and Y coordinates.
 
 - Zipcodes: This column has many missing values and incorrect values. The data dictionary does not define the intended use of this column so this is a column we can consider storing.
@@ -98,8 +117,6 @@ The values in this column can easily be filled in based on what the `Borough` va
 
 - BIN: Building Identification number
 
-- BBL: The Borough, Block, Lot number (BBL) has the same number of missing values as the Building Identification Number (BIN). We see that there are no missing values for `BORO_CODE`, `BLOCK`, and `LOT` so we can use these values to fill in the BBL.
-
 - Community Board, Council District, Census Tract: There are 10,304 missing values in each of these columns. It is difficult to use information from other columns to fill in the data. In terms of significance for the overall project, it would be best to consider storing these columns.
 
 - NTA: The Neighborhood Tabulation Area cannot be filled using other columns. It would be difficult to fill in the values unless we access a different dataset.
@@ -116,8 +133,7 @@ The values in this column can easily be filled in based on what the `Borough` va
 
 - BOROUGH:
 
-+ **Are their redundant information in the data? Try storing
-  the data using `arrow` and comment on the efficiency gain.**
+**Are their redundant information in the data? Try storing the data using `arrow` and comment on the efficiency gain.**
 
 From the previous part, these are the following columns I would store:
 
@@ -131,7 +147,8 @@ From the previous part, these are the following columns I would store:
 8. Census Tract
 9. NTA
 
-```{python}
+```
+{python}
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -151,54 +168,29 @@ parquet_size = os.path.getsize(parquet_file_path)
 original_size, parquet_size
 ```
 
-+ **Are there invalid zipcode or borough? Justify and clean
-  them up if yes.**
+**Are there invalid zipcode or borough? Justify and clean them up if yes.**
 
 
 
 ## Data exploration
 
-+ **Create binary variable `passing` indicating passing or
-  not for the inspection result. Does `passing` depend on
-  whether the inspection is initial or compliance? State
-  your hypothesis and summarize your test result.**
+**Create binary variable `passing` indicating passing or not for the inspection result. Does `passing` depend on whether the inspection is initial or compliance? State your hypothesis and summarize your test result.**
 
-+ **Are the passing pattern different across different
-  boroughs for initial inspections? How about compliance
-  inspections? State your hypothesis and summarize your
-  test results.**
+**Are the passing pattern different across different boroughs for initial inspections? How about compliance inspections? State your hypothesis and summarize your test results.**
 
-+ **If we suspect that the passing rate may depends on
-  the time of a day of the inspection, we may compare
-  the passting rates for inspections done in the mornings
-  and inspections one in the afternoons. Visualize the
-  comparison by borough and inspection type.**
+**If we suspect that the passing rate may depends on the time of a day of the inspection, we may compare the passing rates for inspections done in the mornings and inspections one in the afternoons. Visualize the comparison by borough and inspection type.**
 
-+ **Perform a formal hypothesis test to confirm the
-  observations from your visualization.**
+**Perform a formal hypothesis test to confirm the observations from your visualization.**
 
 ## Data analytics
-+ **Aggregate the inspections by zip code to create
-  a dataset with five columns. The first three columns are
-  `zipcode`; `n_initial`, the
-  count of the initial inspections in that zipcode; and 
-  `n_initpass`, the number of initial inspections with a
-  passing result in that zipcode. The other two variables
-  are `n_compliance` and `n_comppass`, the counterpart
-  for compliance inspections.**
 
-+ **Add a variable to your dataset, `n_sighting`, which
-  represent the number of rodent sightings from the 311
-  service request data in the same 2022-2023 period.**
+**Aggregate the inspections by zip code to create a dataset with five columns. The first three columns are `zipcode`; `n_initial`, the count of the initial inspections in that zipcode; and  `n_initpass`, the number of initial inspections with a passing result in that zipcode. The other two variables are `n_compliance` and `n_comppass`, the counterpart for compliance inspections.**
 
-+ **Merge your dataset with the simple zipcode table in
-  package `uszipcode` by zipcode to obtain demographic
-  and socioeconomic variables at the zipcode level.**
+**Add a variable to your dataset, `n_sighting`, which represent the number of rodent sightings from the 311 service request data in the same 2022-2023 period.**
 
-+ **Build a binomial regression for the passing rate of initial
-  inspections at the zipcode level. Assess the goodness-of-fit
-  of your model. Summarize your results to a New Yorker
-  who is not data science savvy.**
+**Merge your dataset with the simple zipcode table in package `uszipcode` by zipcode to obtain demographic and socioeconomic variables at the zipcode level.**
+
+**Build a binomial regression for the passing rate of initial inspections at the zipcode level. Assess the goodness-of-fit of your model. Summarize your results to a New Yorker who is not data science savvy.**
 
 ##  Research Question
 
