@@ -35,6 +35,7 @@ to understand the data.
 # Importing packages and dataset
 import pandas as pd
 #import pyarrow
+from uszipcode import SearchEngine
 import warnings
 
 # Suppress all warnings
@@ -308,6 +309,35 @@ merged_data.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 ```
 
 - ZIP_CODE: By using information from the `Location` and  `Street Name` column, we can locate the zipcode using a geospatial python package.
+
+```{python}
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
+
+# Create a SearchEngine object for looking up ZIP codes
+search = SearchEngine()
+
+# Function to look up ZIP code by latitude and longitude
+def get_zipcode(lat, lon):
+    if lat == 0.0 and lon == 0.0:
+        # Return 0 if both latitude and longitude are 0.0
+        return 0
+    result = search.by_coordinates(lat=lat, lng=lon, radius=30, returns=1)
+    if result:
+        return result[0].zipcode
+    return None
+
+# Iterate over the DataFrame rows and fill in missing ZIP codes
+for index, row in clean.iterrows():
+    # Check if ZIP_CODE is NaN, 0, or -1, and latitude/longitude are not both 0.0
+    if pd.isnull(row['ZIP_CODE']) or row['ZIP_CODE'] in [-1]:
+        if pd.notnull(row['LATITUDE']) and pd.notnull(row['LONGITUDE']):
+            zip_code = get_zipcode(row['LATITUDE'], row['LONGITUDE'])
+            clean.at[index, 'ZIP_CODE'] = zip_code
+            
+# Save the updated dataset
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+```
 
 - HOUSE_NUMBER:
 
