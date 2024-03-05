@@ -39,6 +39,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
 import numpy as np
+from statsmodels.formula.api import ols
 # Storage Packages
 import pyarrow as pa
 import pyarrow.feather as feather
@@ -796,6 +797,7 @@ plt.plot(x_pred, y_pred, color='red', label='Fitted Model')
 plt.legend()
 plt.show()
 ```
+
 ##  Research Question
 
    Now you know the data quite well. Come up with a research
@@ -803,15 +805,59 @@ plt.show()
    could be analytics or visualizations. Perform the needed
    analyses and answer your question.
 
-Potential Questions:
+### Questions to Answer
+ 
+**How do demographic factors like population density or socioeconomic factors like average income correlate with rodent sightings?**
 
-- How does the density of rodent sightings (as reported through 311 service requests) correlate with the success rate of initial rodent inspections in different New York City zip codes?
-- Has the number of rodent sightings and the pass rate of inspections changed over time (monthly or yearly)?
-- Which areas (zip codes) in New York City have the highest frequency of rodent sightings and the lowest inspection pass rates?
-- How do demographic factors like population density or socioeconomic factors like average income correlate with rodent sightings?
-- Do areas with high initial inspection failure rates show improvement in compliance inspections?
-- Is there a seasonal pattern to rodent sightings and inspection outcomes?
-- 
+```{python}
+# Convert ZIP_CODE to string in both DataFrames
+aggregated_sightings['ZIP_CODE'] = aggregated_sightings['ZIP_CODE'].astype(str)
+zipcode_df['zipcode'] = zipcode_df['zipcode'].astype(str)
+
+# Step 1: Merge the Datasets
+merged_df = pd.merge(
+    aggregated_sightings,
+    zipcode_df,
+    left_on='ZIP_CODE', 
+    right_on='zipcode', 
+    how='inner'
+)
+
+# Step 2: Correlation Analysis
+correlation = merged_df[['n_sighting', 'population_density', 'median_household_income']].corr()
+print("Correlation Matrix:\n", correlation)
+
+# Step 3: Visualization
+# Scatter plot for population density and rodent sightings
+sns.scatterplot(x='population_density', y='n_sighting', data=merged_df)
+plt.title('Population Density vs. Rodent Sightings')
+plt.show()
+
+# Scatter plot for average income and rodent sightings
+sns.scatterplot(x='median_household_income', y='n_sighting', data=merged_df)
+plt.title('Average Income vs. Rodent Sightings')
+plt.show()
+
+# Step 4: Statistical Testing
+# Linear regression model for hypothesis testing
+# Dependent variable: number of sightings; 
+# Independent variables: population density and median household income
+model = ols('n_sighting ~ population_density + median_household_income', data=merged_df).fit()
+
+# Display the results of the hypothesis test
+hypothesis_test_results = model.summary()
+print(hypothesis_test_results)
+
+# Step 5: Interpretation
+# Based on the output of the correlation and plots, you would interpret the results.
+
+# Example Interpretation in non-technical terms:
+# "Areas with higher population densities seem to have more rodent sightings, which could be due to the availability of more food and shelter for rodents. On the other hand, average income does not show a clear relationship with the number of rodent sightings. This might indicate that income level is not a direct factor in rodent sightings or that other factors could be at play."
+```
+
+
+**Do areas with high initial inspection failure rates show improvement in compliance inspections?**
+
 
 ## References 
 
