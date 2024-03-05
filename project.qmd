@@ -345,6 +345,7 @@ clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 - HOUSE_NUMBER and STREET_NAME: Using the code below, we are able to take the `Latitude` and `Longitude` values to find out the `STREET_NAME` and `HOUSE_NUMBER` if those attributes are available. A warning for this code is that it takes a significant amount of time to render. Because of the very large dataset, it took roughly 10-20 minutes to render everything.
 
 ```{python}
+"""
 # Initialize the geocoder
 geolocator = Nominatim(user_agent="Project")
 
@@ -380,9 +381,19 @@ for index, row in clean.iterrows():
 
 # Save the updated dataset
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+"""
 ```
 
 - RESULT and BOROUGH: In terms of number of missing values, these two columns have very few. We can analyze them and see what is the potential issue and why it is missing.
+
+```{python}
+# Load your dataset
+clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
+
+# Display rows where the 'RESULT' column is empty (NaN)
+empty_result_rows = clean[clean['RESULT'].isnull()]
+print(empty_result_rows)
+```
 
 **Data Cleaning Conclusion**
 
@@ -397,6 +408,12 @@ missing_info = clean.isnull().sum()
 missing_info_summary = missing_info[missing_info > 0].sort_values(ascending=False)
 missing_info_summary
 ```
+
+From this summary, the number of missing values have been reduced signifcantly and can be used to properly analyze the data.
+
+- There are still 10,304 NTA values that are missing. The column itself can be removed but there is a way to retrieve the NTA value if NTACode was given.
+- There are some `HOUSE_NUMBER` values that are missing because some of the rows reference an entire street and not necessarily one building.
+- Likewise, `LOCATION`, `LATITUDE`, and `LONGITUDE` have some values that are missing because the `STREET_NAME` is referencing an *entire* street. 
 
 **Are their redundant information in the data? Try storing the data using `arrow` and comment on the efficiency gain.**
 
