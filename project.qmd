@@ -735,7 +735,22 @@ binom_results.summary()
 ```
 
 **Visualizing the binomial model**
+```{python}
+# Plotting the binomial regression model
+plt.scatter(X['n_sighting'], y, alpha=0.5, label='Data Points')
+plt.xlabel('Number of Sightings (n_sighting)')
+plt.ylabel('Initial Pass Rate')
+plt.title('Binomial Regression Model for Initial Inspection Pass Rate')
 
+# Generating predictions for the plot
+x_pred = np.linspace(X['n_sighting'].min(), X['n_sighting'].max(), 100)
+x_pred_with_const = sm.add_constant(x_pred)
+y_pred = binom_results.predict(x_pred_with_const)
+
+plt.plot(x_pred, y_pred, color='red', label='Fitted Model')
+plt.legend()
+plt.show()
+```
 ##  Research Question
 
    Now you know the data quite well. Come up with a research
