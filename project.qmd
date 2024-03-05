@@ -510,6 +510,45 @@ Our results tell us that our Chi-Squared value is 29,443.398 with a p-value = 0.
 
 **Are the passing pattern different across different boroughs for initial inspections? How about compliance inspections? State your hypothesis and summarize your test results.**
 
+```{python}
+# Load the dataset
+clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
+
+# Define your criteria for 'passing' and categorize the 'passing' column
+clean['passing'] = clean['RESULT'].apply(lambda x: 1 if x == 'Passed' else 0)
+
+# Chi-Squared Test for Initial Inspections
+initial_inspections = clean[clean['INSPECTION_TYPE'] == 'Initial']
+initial_contingency_table = pd.crosstab(initial_inspections['BOROUGH'], initial_inspections['passing'])
+chi2_initial, p_initial, dof_initial, expected_initial = chi2_contingency(initial_contingency_table)
+
+# Chi-Squared Test for Compliance Inspections
+compliance_inspections = clean[clean['INSPECTION_TYPE'] == 'Compliance']
+compliance_contingency_table = pd.crosstab(compliance_inspections['BOROUGH'], compliance_inspections['passing'])
+
+chi2_compliance, p_compliance, dof_compliance, expected_compliance = chi2_contingency(compliance_contingency_table)
+
+# Results
+print('Initial Inspections:')
+print(initial_contingency_table)
+print(chi2_initial, p_initial)
+
+print('Compliance Inspections:')
+print(compliance_contingency_table)
+print(chi2_compliance, p_compliance)
+```
+
+**Analysis** 
+
+| Null Hypotheses for initial/compliance inspections: There is no assocation between the borough and the passing rates for inspections.
+| Alternative Hypotheses for initial/compliance inspections: There is an association between the borough and the passing rates for inspections. 
+
+For the Initial inspections, we have a Chi-Squared value of 2880.85 and a p-value of 0.0 (assumed that it is a very small number). We can reject the null hypothesis and say that there is a statistically significant association between boroughs and passing rates for initial inspections. We can say that the passing patterns vary between boroughs.
+
+Similarly, our Compliance inspections have a Chi-Squared value of 294.33 and a p-value of 1.813E-62 (a very small number close to zero). We can also reject the null hypothesis and say that there is a statistically significant association between boroughs and passing rates. The passing patterns also very between boroughs.
+
+These tests suggest that the location where an inspection occurs has an impact on whether or not its likely to pass.
+
 **If we suspect that the passing rate may depends on the time of a day of the inspection, we may compare the passing rates for inspections done in the mornings and inspections one in the afternoons. Visualize the comparison by borough and inspection type.**
 
 **Perform a formal hypothesis test to confirm the observations from your visualization.**
