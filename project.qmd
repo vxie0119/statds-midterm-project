@@ -174,9 +174,69 @@ clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 
 The values in this column can easily be filled in based on what the `Borough` value is.
 
-- Police Precinct, Community Districts, City Council District: There are an equal number of values that are missing. These values would also be quite difficult to fill in and do not seem to have a purpose in the dataset. We can consider storing these values.
+```{python}
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
 
-- BIN: Building Identification number
+# Mapping of boroughs to their boundary numbers
+borough_mapping = {
+    'Staten Island': 1,
+    'Brooklyn': 2,
+    'Queens': 3,
+    'Manhattan': 4,
+    'Bronx': 5
+}
+
+# Filling in the 'Borough Boundary' column based on the 'Borough' column
+clean['Borough Boundaries'] = clean['BOROUGH'].map(borough_mapping)
+
+# Convert 'Borough Boundary' to integer
+# Here, NaN values (if any) will prevent conversion to integers, so you might need to fill them first
+clean['Borough Boundaries'] = clean['Borough Boundaries'].fillna(-1).astype(int)
+
+# Save the updated dataset
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+```
+
+- Police Precinct, Community Districts, City Council District: The PLUTO dataset does not have a replacement for Community Districts and City Council District. These columns were dropped as they provide no significance to the investigation. Police Precinct was one of the common column names between the two datasets so I filled in the empty values based off of BBL number.
+
+```{python}
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
+
+# Ensure BBL is the same data type in both datasets
+clean['BBL'] = clean['BBL'].astype(int)
+pluto['bbl'] = pluto['bbl'].astype(int)
+
+# Merge the datasets on BBL
+merged_data = pd.merge(clean, pluto[['bbl', 'policeprct']], 
+                       left_on='BBL', right_on='bbl', how='left')
+
+# Fill in the missing 'Police Precinct' values
+merged_data['Police Precincts'] = merged_data['Police Precincts'].fillna(merged_data['policeprct'])
+
+# Convert 'Police Precinct' to integer
+merged_data['Police Precincts'] = merged_data['Police Precincts'].fillna(-1).astype(int)
+
+# Drop the extra columns
+merged_data.drop(['Community Districts', 'City Council Districts', 'bbl', 'policeprct'], axis=1, inplace=True)
+
+# Save the merged dataset to a new CSV file
+merged_data.to_csv("./data/cleaned_rodent_inspection.csv", index=False)
+```
+
+- BIN: The Building Identification Number was not found in the PLUTO dataset. Although it seems like an important column to have, there are no columns that can be used to fill in the missing values. The best step would be to remove the column completely.
+
+```{python}
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
+
+# Dropping BIN column   
+clean.drop('BIN', axis = 1, inplace = True)
+
+# Save the updated dataset
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+```
 
 - Community Board, Council District, Census Tract: There are 10,304 missing values in each of these columns. It is difficult to use information from other columns to fill in the data. In terms of significance for the overall project, it would be best to consider storing these columns.
 
