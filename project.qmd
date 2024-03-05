@@ -49,6 +49,9 @@ import warnings
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
+# Disable Intel MKL warning
+os.environ['MKL_DEBUG_CPU_TYPE'] = '5'
+
 # Suppress all warnings
 warnings.filterwarnings('ignore')
 
@@ -106,7 +109,8 @@ def create_bbl(boro_code, block, lot):
     return int(f"{boro_code}{block:05d}{lot:04d}")
 
 # Applying the function to each row where BBL is missing
-data.loc[data['BBL'].isnull(), 'BBL'] = data.apply(lambda row: create_bbl(row['BORO_CODE'],
+data.loc[data['BBL'].isnull(), 'BBL'] = data.apply(lambda row: create_bbl(\
+                                                   row['BORO_CODE'],
                                                    row['BLOCK'], row['LOT']) 
                                                    if pd.isnull(row['BBL']) 
                                                    else row['BBL'], axis=1)
@@ -673,20 +677,22 @@ initial_inspections = clean[clean['INSPECTION_TYPE'] == 'Initial']
 compliance_inspections = clean[clean['INSPECTION_TYPE'] == 'Compliance']
 
 # Aggregating data for initial inspections
-n_initial = initial_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID']
+n_initial = initial_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID']\
                                .count().rename('n_initial')
-n_initpass = initial_inspections[initial_inspections['passing'] == 1].groupby('ZIP_CODE')
-                                ['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_initpass')
+n_initpass = initial_inspections[initial_inspections['passing'] == 1]\
+                                 .groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID']\
+                                 .count().rename('n_initpass')
 
 # Aggregating data for compliance inspections
-n_compliance = compliance_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID']
-                                    .count().rename('n_compliance')
-n_comppass = compliance_inspections[compliance_inspections['passing'] == 1].groupby('ZIP_CODE')
-                                   ['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_comppass')
+n_compliance = compliance_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID']\
+                                     .count().rename('n_compliance')
+n_comppass = compliance_inspections[compliance_inspections['passing'] == 1]\
+                                    .groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID']\
+                                    .count().rename('n_comppass')
 
 # Combining the results into one dataframe
-aggregated_data = pd.concat([n_initial, n_initpass, n_compliance, n_comppass], axis=1)
-                    .fillna(0).reset_index()
+aggregated_data = pd.concat([n_initial, n_initpass, n_compliance, n_comppass], \
+                             axis=1).fillna(0).reset_index()
 
 aggregated_data = aggregated_data.astype(int)
 aggregated_data.head()
@@ -704,7 +710,8 @@ aggregated_sightings = pd.merge(aggregated_data, n_sighting, how='left',
                                 left_on='ZIP_CODE', right_index=True)
 
 # Fill NaN values with 0 for zip codes with no recorded sightings
-aggregated_sightings['n_sighting'] = aggregated_sightings['n_sighting'].fillna(0).astype(int)
+aggregated_sightings['n_sighting'] = aggregated_sightings['n_sighting']\
+                                     .fillna(0).astype(int)
 
 aggregated_sightings.head()
 ```
@@ -739,6 +746,10 @@ def pretty_print(df, max_row=10, max_col=5):
         print(df.head(max_row))
 
 pretty_print(zipcode_df)
+
+# Print the columns of the zipcode_df DataFrame vertically
+for column in zipcode_df.columns:
+    print(column)
 ```
 
 **Build a binomial regression for the passing rate of initial inspections at the zipcode level. Assess the goodness-of-fit of your model. Summarize your results to a New Yorker who is not data science savvy.**
@@ -746,8 +757,8 @@ pretty_print(zipcode_df)
 ```{python}
 # Creating the passing rate variable for initial inspections
 # The passing rate is calculated as n_initpass / n_initial
-aggregated_sightings['initial_pass_rate'] = aggregated_sightings['n_initpass'] / 
-                                            aggregated_sightings['n_initial']
+aggregated_sightings['initial_pass_rate'] = (aggregated_sightings['n_initpass'] / 
+                                             aggregated_sightings['n_initial'])
 
 # Replace NaN values and infinite values (due to division by zero) with zeros
 aggregated_sightings['initial_pass_rate'].fillna(0, inplace=True)
@@ -806,3 +817,4 @@ Potential Questions:
 
 * [GeoPy reference](https://stackoverflow.com/questions/60928516/get-address-from-given-coordinate-using-python)
 * [PLUTO data](https://data.cityofnewyork.us/City-Government/Primary-Land-Use-Tax-Lot-Output-PLUTO-/64uk-42ks/data)
+* [Rodent Inspection data](https://data.cityofnewyork.us/Health/Rodent-Inspection/p937-wjvj/about_data)
