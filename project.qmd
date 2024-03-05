@@ -91,17 +91,78 @@ missing_info_summary
 
 # Function to concatenate boro_code, block, and lot to create the BBL
 def create_bbl(boro_code, block, lot):
-    return f"{boro_code}{block:05d}{lot:04d}"
+    return int(f"{boro_code}{block:05d}{lot:04d}")
 
 # Applying the function to each row where BBL is missing
-data.loc[data['BBL'].isnull(), 'BBL'] = data.apply(lambda row: create_bbl(row['BORO_CODE'], row['BLOCK'], row['LOT']) if pd.isnull(row['BBL']) else row['BBL'], axis=1)
+data.loc[data['BBL'].isnull(), 'BBL'] = data.apply(lambda row: create_bbl(row['BORO_CODE'],
+                                                   row['BLOCK'], row['LOT']) 
+                                                   if pd.isnull(row['BBL']) 
+                                                   else row['BBL'], axis=1)
+
+# Convert the entire BBL column to integer
+data['BBL'] = data['BBL'].astype(int)
 
 # Checking the first few rows to verify the changes
-data[['BORO_CODE', 'BLOCK', 'LOT', 'BBL']].head()
-```
-- X_COORD and Y_COORD: (fix) There are many cases where the X and Y coordinates are missing. This can be filled in using the `Location` column. If the `Location` column is missing, we can take the `HOUSE_NUMBER`, `STREET_NAME`, `ZIP_CODE` to reverse geocode and find the X and Y coordinates.
+print(data[['BORO_CODE', 'BLOCK', 'LOT', 'BBL']].head())
 
-- Zipcodes: This column has many missing values and incorrect values. The data dictionary does not define the intended use of this column so this is a column we can consider storing.
+# Save the modified dataset
+data.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+```
+
+- X_COORD and Y_COORD: These coordinates use the NY State Plane Long Island Coordinate System. I also noted that these coordinates may also be contained within the PLUTO dataset. Because we just filled in the BBL in the Inspection dataset, it will be useful in our search to fill in the coordinates. 
+
+```{python}
+# Filling X/Y Coordinates
+
+clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
+
+# Ensure BBL is the same data type in both datasets
+clean['BBL'] = clean['BBL'].astype(int)
+pluto['bbl'] = pluto['bbl'].astype(int)
+
+# Merge the datasets on BBL
+merged_data = pd.merge(clean, pluto[['bbl', 'xcoord', 'ycoord']], 
+                       left_on='BBL', right_on='bbl', how='left')
+
+# Fill in the missing X_coord and Y_coord values
+merged_data['X_COORD'] = merged_data['X_COORD'].fillna(merged_data['xcoord'])
+merged_data['Y_COORD'] = merged_data['Y_COORD'].fillna(merged_data['ycoord'])
+
+# Convert X_COORD and Y_COORD to integers
+merged_data['X_COORD'] = merged_data['X_COORD'].astype(int, errors='ignore')
+merged_data['Y_COORD'] = merged_data['Y_COORD'].astype(int, errors='ignore')
+
+# Fill NaN values with a placeholder (e.g., -1) and then convert to integers
+# Otherwise, all of the values will have a decimal point after
+merged_data['X_COORD'] = merged_data['X_COORD'].fillna(-1).astype(int)
+merged_data['Y_COORD'] = merged_data['Y_COORD'].fillna(-1).astype(int)
+
+# Drop the extra columns from PLUTO
+merged_data.drop(['bbl', 'xcoord', 'ycoord'], axis=1, inplace=True)
+
+# Save the merged dataset to a new CSV file
+merged_data.to_csv("./data/cleaned_rodent_inspection.csv", index=False)
+```
+
+- Zipcodes: Within this column, there are 31,114 rows with missing values. Not only that, the information does not serve a purpose to our investigation considering it was not mentioned in the data dictionary. With this in mind, it would be best to remove the column to free up some storage space.
+
+```{python}
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
+
+# Dropping Zipcodes column
+clean.drop('Zip Codes', axis = 1, inplace = True)
+
+# Fill NaN values in ZIP_CODE column (if any) with a placeholder (e.g., -1)
+# Use an appropriate placeholder that makes sense for your data
+clean['ZIP_CODE'] = clean['ZIP_CODE'].fillna(-1)
+
+# Convert ZIP_CODE to integer
+clean['ZIP_CODE'] = clean['ZIP_CODE'].astype(int)
+
+# Save the updated dataset back to CSV
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+```
 
 - Borough Boundaries: From the data, we see that the `Borough Boundaries` column has a number associated with a specific borough. We see that:
 
