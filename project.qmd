@@ -34,7 +34,9 @@ to understand the data.
 ```{python}
 # Importing packages and dataset
 import pandas as pd
-#import pyarrow
+import pyarrow as pa
+import pyarrow.feather as feather
+import os
 from uszipcode import SearchEngine
 import warnings
 from arcgis.geocoding import reverse_geocode
@@ -395,6 +397,15 @@ empty_result_rows = clean[clean['RESULT'].isnull()]
 print(empty_result_rows)
 ```
 
+From the 21 instances where `RESULT` is empty, I noticed that majority of the other columns are filled. I also observed that the only `INSPECTION_TYPE` is Compliance. This is interesting because it means that on the second inspection, we have a missing result which may indicate that someone forgot to input the result.
+
+```{python}
+# Display rows where the 'RESULT' column is empty (NaN)
+empty_borough_rows = clean[clean['BOROUGH'].isnull()]
+print(empty_borough_rows)
+```
+With the 3 instances where `BOROUGH` is empty, it was weird to see both `X_COORD`, `Y_COORD`, `LATITUDE`, and `LONGITUDE` empty. There were also a bunch of other attributes that were empty (indicated by -1). Because there are very few instances to clean, you can manually clean it without using code. I find it compelling how street names are given with the zipcode but a `BOROUGH` was not inputted. 
+
 **Data Cleaning Conclusion**
 
 ```{python}
@@ -415,40 +426,28 @@ From this summary, the number of missing values have been reduced signifcantly a
 - There are some `HOUSE_NUMBER` values that are missing because some of the rows reference an entire street and not necessarily one building.
 - Likewise, `LOCATION`, `LATITUDE`, and `LONGITUDE` have some values that are missing because the `STREET_NAME` is referencing an *entire* street. 
 
-**Are their redundant information in the data? Try storing the data using `arrow` and comment on the efficiency gain.**
+**Are there redundant information in the data? Try storing the data using `arrow` and comment on the efficiency gain.**
 
-From the previous part, these are the following columns I would store:
+After cleaning the data, you could say that `BBL` is redundant as the table already contains `BORO_CODE`, `BLOCK` and `LOT`. But from my cleaning, `BBL` played a crucial role in finding missing data. It identifies a specific taxlot that has information ranging from street name to zipcode. You could also say that `LATITUDE` and `LONGITUDE` is redundant because it is contained in `LOCATION`. I believe that it is good to keep both for specific use cases where you may need a `LOCATION` attribute. 
 
-1. Zip codes
-2. Police Precincts
-3. Community Districts
-4. City Council Districts
-5. BIN
-6. Community Board
-7. Council District
-8. Census Tract
-9. NTA
+```{python}
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
 
+# Convert the Pandas DataFrame to an Arrow Table
+table = pa.Table.from_pandas(clean)
+
+# Save the Arrow Table as a Feather file
+feather_file_path = './data/cleaned_rodent_inspection.feather'
+feather.write_feather(table, feather_file_path)
+
+# Check the size of the original CSV file and the new Feather file
+original_size = os.path.getsize('./data/cleaned_rodent_inspection.csv')
+feather_size = os.path.getsize(feather_file_path)
+
+original_size, feather_size
 ```
-{python}
-import pyarrow as pa
-import pyarrow.parquet as pq
 
-# Converting the pandas dataframe to a pyarrow table
-arrow_table = pa.Table.from_pandas(data)
-pa.default_serialization_context().serialize(pa.Table.from_pandas(data))
-
-# Writing the data to a parquet file to check the efficiency in terms of storage
-parquet_file_path = './Rodent_Inspection_Data.parquet'
-pq.write_table(arrow_table, parquet_file_path)
-
-# Checking the size of the original CSV file and the new Parquet file
-import os
-original_size = os.path.getsize(file_path)
-parquet_size = os.path.getsize(parquet_file_path)
-
-original_size, parquet_size
-```
 
 **Are there invalid zipcode or borough? Justify and clean them up if yes.**
 
