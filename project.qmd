@@ -35,6 +35,8 @@ to understand the data.
 # Importing packages and dataset
 import pandas as pd
 from scipy.stats import chi2_contingency
+import matplotlib.pyplot as plt
+import seaborn as sns
 # Storage Packages
 import pyarrow as pa
 import pyarrow.feather as feather
@@ -495,6 +497,9 @@ contingency_table = pd.crosstab(clean['passing'], clean['INSPECTION_TYPE'])
 # Perform the Chi-Squared Test
 chi2, p, dof, expected = chi2_contingency(contingency_table)
 
+# Save the updated dataset
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+
 # Summarize the results
 print(contingency_table)
 print(f"Chi-Squared Value: {chi2}")
@@ -528,6 +533,9 @@ compliance_contingency_table = pd.crosstab(compliance_inspections['BOROUGH'], co
 
 chi2_compliance, p_compliance, dof_compliance, expected_compliance = chi2_contingency(compliance_contingency_table)
 
+# Save the updated dataset
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+
 # Results
 print('Initial Inspections:')
 print(initial_contingency_table)
@@ -551,8 +559,89 @@ These tests suggest that the location where an inspection occurs has an impact o
 
 **If we suspect that the passing rate may depends on the time of a day of the inspection, we may compare the passing rates for inspections done in the mornings and inspections one in the afternoons. Visualize the comparison by borough and inspection type.**
 
-**Perform a formal hypothesis test to confirm the observations from your visualization.**
+```{python}
+# Load the dataset
+clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
 
+# Convert inspection time to datetime (if it's not already)
+# and create 'TIME_OF_DAY' category based on the hour of the inspection
+clean['INSPECTION_DATE'] = pd.to_datetime(clean['INSPECTION_DATE'])
+clean['TIME_OF_DAY'] = clean['INSPECTION_DATE'].apply(lambda x: 'Morning' if x.hour < 12 else 'Afternoon')
+
+# Define your criteria for 'passing' and categorize the 'passing' column
+clean['passing'] = clean['RESULT'].apply(lambda x: 1 if x == 'Passed' else 0)
+
+# Calculate the passing rate by borough, inspection type, and time of day
+passing_rate_comparison = clean.groupby(['BOROUGH', 'INSPECTION_TYPE', 'TIME_OF_DAY'])['passing'].mean().reset_index()
+
+# Save the updated dataset
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+
+# Visualize the passing rates
+plt.figure(figsize=(14, 7))
+sns.barplot(data=passing_rate_comparison, x='BOROUGH', y='passing', hue='TIME_OF_DAY', ci=None)
+plt.title('Passing Rates by Time of Day and Borough')
+plt.ylabel('Passing Rate')
+plt.xlabel('Borough')
+plt.legend(title='Time of Day')
+plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+plt.tight_layout()  # Adjust the plot to ensure everything fits without overlapping
+plt.show()
+```
+
+**Perform a formal hypothesis test to confirm the observations from your visualization.**
+```{python}
+# Load the dataset
+clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
+
+# Assuming the inspection date and result columns are named 'INSPECTION_DATE' and 'RESULT'
+# Convert inspection date to datetime
+clean['INSPECTION_DATE'] = pd.to_datetime(clean['INSPECTION_DATE'])
+
+# Create 'TIME_OF_DAY' category based on the hour of the inspection
+clean['TIME_OF_DAY'] = clean['INSPECTION_DATE'].dt.hour.apply(lambda x: 'Morning' if x < 12 else 'Afternoon')
+
+# Define criteria for 'passing'
+clean['passing'] = clean['RESULT'].apply(lambda x: 1 if x == 'Passed' else 0)
+
+# Perform hypothesis testing for each borough
+results = []
+
+for borough in clean['BOROUGH'].unique():
+    # Subset data for the borough
+    borough_data = clean[clean['BOROUGH'] == borough]
+    
+    # Create contingency table for passing rates by time of day
+    contingency_table = pd.crosstab(borough_data['passing'], 
+                                    borough_data['TIME_OF_DAY'])
+    
+    # Perform the Chi-Squared Test
+    try:
+        chi2, p, dof, expected = chi2_contingency(contingency_table)
+        result = {
+            'Borough': borough,
+            'Chi-Squared': chi2,
+            'P-Value': p,
+            'Degrees of Freedom': dof
+        }
+    except ValueError as e:
+        result = {
+            'Borough': borough,
+            'Error': str(e)
+        }
+
+    # Append the result
+    results.append(result)
+
+# Save the updated dataset
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+
+# Convert the results into a DataFrame for display
+results_df = pd.DataFrame(results)
+results_df
+```
+
+From the dataframe output, 
 ## Data analytics
 
 **Aggregate the inspections by zip code to create a dataset with five columns. The first three columns are `zipcode`; `n_initial`, the count of the initial inspections in that zipcode; and  `n_initpass`, the number of initial inspections with a passing result in that zipcode. The other two variables are `n_compliance` and `n_comppass`, the counterpart for compliance inspections.**
