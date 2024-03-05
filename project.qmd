@@ -34,22 +34,40 @@ to understand the data.
 ```{python}
 # Importing packages and dataset
 import pandas as pd
-import pyarrow
+#import pyarrow
 
-data = pd.read_csv("./Rodent_Inspection_Data.csv")
+data = pd.read_csv("./data/Rodent_Inspection_Data.csv")
 
 # Listing the columns in vertical order
 columns = data.columns.to_series().reset_index(drop=True)
 columns
 ```
 
-## Data cleaning.
+## Data cleaning
 
 + **There are two zipcode columns: `ZIP_CODE` and `Zipcodes`.
   Which one represent the zipcode of the inspection site? 
   Comment on the data dictionary.**
 
-The column `ZIP_CODE` represents the actual zipcode of the inspection site. When reviewing some of the `Zipcodes` values, I saw that some of them were from different states. Based on the data dictionary, I did not see `Zipcodes` in that file. From this, I can assume that there is no importance with the `Zipcodes` column. 
+The column `ZIP_CODE` represents the actual zipcode of the inspection site. When reviewing some of the `Zipcodes` values, I saw that some of them were from different states. We see that `Zipcodes` may be based off where the building owner is located. Given the representation of the value, it would be best to remove the `Zipcodes` column as it is not important in the overall investigation. 
+
+Some key notes in the data dictionary:
+- If a property/taxlot does not appear on file, it does not indicate the absense of rats.
+- Neighborhoods with higher numbers of properties with active rat signs may not have higher rat populations. Just simply more inspections.
+- `INSPECTION_TYPE` and `JOB_TICKET_OR_WORK_ORDER_ID` are unique identifiers for records in the dataset. 
+- `JOB_ID` is not a unique value and two values may be equal depending on if it is an `Initial` inspection or `Compliance` inspection. 
+
+```{python}
+is_unique = data['JOB_ID'].is_unique
+is_unique
+```
+
+- `JOB_PROGRESS` aligns with `INSPECTION_TYPE` where Initial = 1 and Compliance = 2.
+- `BBL` is a number using `BORO_CODE`, `BLOCK`, and `LOT`. If any `BBL` values are missing, we can generate the values based on the three other values. This dataset can also be mapped using the Department of City Planning's PLUTO dataset which could be used to fill in missing data.
+    - Common columns between Inspection data and PLUTO data: borough, block, lot, community board, census tract, council district, postcode/zipcode, police precinct, bbl, xcoord, ycoord, latitude, longitude.
+- `X/Y_COORDINATE` use the NY State Plane Long Island Coordinate system.
+- `Latitude/Longitude` is in decimal degrees of the World Geodetic System (WGS84).
+
 
 + **Summarize the missing information. Are their missing values
   that can be filled using other columns? Fill in those values.**
@@ -78,7 +96,7 @@ The values in this column can easily be filled in based on what the `Borough` va
 
 - Police Precinct, Community Districts, City Council District: There are an equal number of values that are missing. These values would also be quite difficult to fill in and do not seem to have a purpose in the dataset. We can consider storing these values.
 
-- BIN:
+- BIN: Building Identification number
 
 - BBL: The Borough, Block, Lot number (BBL) has the same number of missing values as the Building Identification Number (BIN). We see that there are no missing values for `BORO_CODE`, `BLOCK`, and `LOT` so we can use these values to fill in the BBL.
 
@@ -101,12 +119,44 @@ The values in this column can easily be filled in based on what the `Borough` va
 + **Are their redundant information in the data? Try storing
   the data using `arrow` and comment on the efficiency gain.**
 
-From the previous part
+From the previous part, these are the following columns I would store:
+
+1. Zip codes
+2. Police Precincts
+3. Community Districts
+4. City Council Districts
+5. BIN
+6. Community Board
+7. Council District
+8. Census Tract
+9. NTA
+
+```{python}
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+# Converting the pandas dataframe to a pyarrow table
+arrow_table = pa.Table.from_pandas(data)
+pa.default_serialization_context().serialize(pa.Table.from_pandas(data))
+
+# Writing the data to a parquet file to check the efficiency in terms of storage
+parquet_file_path = './Rodent_Inspection_Data.parquet'
+pq.write_table(arrow_table, parquet_file_path)
+
+# Checking the size of the original CSV file and the new Parquet file
+import os
+original_size = os.path.getsize(file_path)
+parquet_size = os.path.getsize(parquet_file_path)
+
+original_size, parquet_size
+```
 
 + **Are there invalid zipcode or borough? Justify and clean
   them up if yes.**
 
-## Data exploration.
+
+
+## Data exploration
 
 + **Create binary variable `passing` indicating passing or
   not for the inspection result. Does `passing` depend on
@@ -127,7 +177,7 @@ From the previous part
 + **Perform a formal hypothesis test to confirm the
   observations from your visualization.**
 
-## Data analytics.
+## Data analytics
 + **Aggregate the inspections by zip code to create
   a dataset with five columns. The first three columns are
   `zipcode`; `n_initial`, the
