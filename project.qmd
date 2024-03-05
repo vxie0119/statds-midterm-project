@@ -511,7 +511,7 @@ print(f"P-Value: {p}")
 | Null Hypothesis: There is no association between the `Inspection_Type` and the `Result`.
 | Alternative Hypothesis: There is an association between the `Inspection_Type` and the `Result`.
 
-Our results tell us that our Chi-Squared value is 29,443.398 with a p-value = 0.0 (we can say that p is a very small number less than 0.0001). If we are using &alpha; = 0.05, we can reject the null hypothesis and say that there is a statistically significant association between inspection type and the inspection result. It seems that the initial inspections have a higher proportion of passing results compared to compliance inspections. But, without knowing the specific criteria used to determine inspection results, we can't specify the cause of associaton.
+Our results tell us that our Chi-Squared value is 29,443.398 with a p-value = 0.0 (we can say that p is a very small number less than 0.0001). If we are using $\alpha$ = 0.05, we can reject the null hypothesis and say that there is a statistically significant association between inspection type and the inspection result. It seems that the initial inspections have a higher proportion of passing results compared to compliance inspections. But, without knowing the specific criteria used to determine inspection results, we can't specify the cause of associaton.
 
 **Are the passing pattern different across different boroughs for initial inspections? How about compliance inspections? State your hypothesis and summarize your test results.**
 
@@ -641,7 +641,8 @@ results_df = pd.DataFrame(results)
 results_df
 ```
 
-From the dataframe output, 
+From the dataframe output, if we use $\alpha$ = 0.05, we can see that Brooklyn, Manhattan, Bronx, and Queens have a p-value less than $\alpha$. Therefore, we reject the null hypothesis and say that there is a statistically significant association between the time of day and inspection results within the boroughs. In the case of Staten Island, we fail to reject the null hypothesis and say that there is no association. This gives us insight on how inspection outcomes vary by time of day in different boroughs.
+
 ## Data analytics
 
 **Aggregate the inspections by zip code to create a dataset with five columns. The first three columns are `zipcode`; `n_initial`, the count of the initial inspections in that zipcode; and  `n_initpass`, the number of initial inspections with a passing result in that zipcode. The other two variables are `n_compliance` and `n_comppass`, the counterpart for compliance inspections.**
