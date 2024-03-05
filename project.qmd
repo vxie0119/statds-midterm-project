@@ -238,8 +238,40 @@ clean.drop('BIN', axis = 1, inplace = True)
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 ```
 
-- Community Board, Council District, Census Tract: There are 10,304 missing values in each of these columns. It is difficult to use information from other columns to fill in the data. In terms of significance for the overall project, it would be best to consider storing these columns.
+- Community Board, Council District, Census Tract: There are 10,304 missing values in each of these columns. They can all be filled using the `community board`, `census tract 2010`, and `council district` columns from the PLUTO dataset. 
 
+```{python}
+# Reload the dataframe so updates pass through
+clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
+
+# Ensure BBL is the same data type in both datasets
+clean['BBL'] = clean['BBL'].astype(int)
+pluto['bbl'] = pluto['bbl'].astype(int)
+
+# Merge the datasets on BBL
+merged_data = pd.merge(clean, pluto[['bbl', 'community board', 'council district', 'census tract 2010']], 
+                       left_on='BBL', right_on='bbl', how='left')
+
+# Fill in the missing values with the corresponding values from PLUTO
+columns_to_update = {
+    'COMMUNITY BOARD': 'community board',
+    'COUNCIL DISTRICT': 'council district',
+    'CENSUS TRACT': 'census tract 2010'
+}
+
+for clean_col, pluto_col in columns_to_update.items():
+    merged_data[clean_col] = merged_data[clean_col].fillna(merged_data[pluto_col])
+
+# Convert to integers
+for col in columns_to_update.keys():
+    merged_data[col] = merged_data[col].fillna(-1).astype(int)
+
+# Drop the extra columns from PLUTO
+merged_data.drop(['bbl', 'community board', 'council district', 'census tract 2010'], axis=1, inplace=True)
+
+# Save the merged dataset to a new CSV file
+merged_data.to_csv("./data/cleaned_rodent_inspection_with_pluto.csv", index=False)
+```
 - NTA: The Neighborhood Tabulation Area cannot be filled using other columns. It would be difficult to fill in the values unless we access a different dataset.
 
 - Location, Latitude, Longitude: With these missing values, they can be used to find each other. If both `Location` and both `Latitude` and `Longitude` values are missing, we can use the `Street Name` and `House Name` to potentially locate all of the missing information. `ZIP_CODE` is also another column that may help our investigation.
