@@ -46,7 +46,6 @@ import os
 # Geospatial Packages
 from uszipcode import SearchEngine
 import warnings
-from arcgis.geocoding import reverse_geocode
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
@@ -204,7 +203,8 @@ borough_mapping = {
 clean['Borough Boundaries'] = clean['BOROUGH'].map(borough_mapping)
 
 # Convert 'Borough Boundary' to integer
-# Here, NaN values (if any) will prevent conversion to integers, so you might need to fill them first
+# Here, NaN values (if any) will prevent conversion to integers, 
+# so you might need to fill them first
 clean['Borough Boundaries'] = clean['Borough Boundaries'].fillna(-1).astype(int)
 
 # Save the updated dataset
@@ -226,13 +226,15 @@ merged_data = pd.merge(clean, pluto[['bbl', 'policeprct']],
                        left_on='BBL', right_on='bbl', how='left')
 
 # Fill in the missing 'Police Precinct' values
-merged_data['Police Precincts'] = merged_data['Police Precincts'].fillna(merged_data['policeprct'])
+merged_data['Police Precincts'] = merged_data['Police Precincts'].fillna(merged_data
+                                                                         ['policeprct'])
 
 # Convert 'Police Precinct' to integer
 merged_data['Police Precincts'] = merged_data['Police Precincts'].fillna(-1).astype(int)
 
 # Drop the extra columns
-merged_data.drop(['Community Districts', 'City Council Districts', 'bbl', 'policeprct'], axis=1, inplace=True)
+merged_data.drop(['Community Districts', 'City Council Districts', 'bbl', 'policeprct'],
+                   axis=1, inplace=True)
 
 # Save the merged dataset to a new CSV file
 merged_data.to_csv("./data/cleaned_rodent_inspection.csv", index=False)
@@ -262,8 +264,9 @@ clean['BBL'] = clean['BBL'].astype(int)
 pluto['bbl'] = pluto['bbl'].astype(int)
 
 # Merge the datasets on BBL
-merged_data = pd.merge(clean, pluto[['bbl', 'community board', 'council district', 'census tract 2010']], 
-                       left_on='BBL', right_on='bbl', how='left')
+merged_data = pd.merge(clean, pluto[['bbl', 'community board', 'council district', 
+                                     'census tract 2010']], 
+                                     left_on='BBL', right_on='bbl', how='left')
 
 # Fill in the missing values with the corresponding values from PLUTO
 columns_to_update = {
@@ -280,7 +283,8 @@ for col in columns_to_update.keys():
     merged_data[col] = merged_data[col].fillna(-1).astype(int)
 
 # Drop the extra columns from PLUTO
-merged_data.drop(['bbl', 'community board', 'council district', 'census tract 2010'], axis=1, inplace=True)
+merged_data.drop(['bbl', 'community board', 'council district', 
+                  'census tract 2010'], axis=1, inplace=True)
 
 # Save the merged dataset to a new CSV file
 merged_data.to_csv("./data/cleaned_rodent_inspection.csv", index=False)
@@ -384,10 +388,13 @@ for index, row in clean.iterrows():
     if pd.isnull(row['HOUSE_NUMBER']) or pd.isnull(row['STREET_NAME']):
         # Perform reverse geocoding if lat and lon are available
         if pd.notnull(row['LATITUDE']) and pd.notnull(row['LONGITUDE']):
-            house_number, street_name = reverse_geocode(row['LATITUDE'], row['LONGITUDE'])
-            clean.at[index, 'HOUSE_NUMBER'] = house_number if house_number else row['HOUSE_NUMBER']
-            clean.at[index, 'STREET_NAME'] = street_name if street_name else row['STREET_NAME']
-
+            house_number, street_name = reverse_geocode(row['LATITUDE'], 
+                                                        row['LONGITUDE'])
+            clean.at[index, 'HOUSE_NUMBER'] = house_number if house_number 
+                                                           else row['HOUSE_NUMBER']
+            clean.at[index, 'STREET_NAME'] = street_name if street_name 
+                                                         else row['STREET_NAME']
+        
 # Save the updated dataset
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)"""
 ```
@@ -400,7 +407,7 @@ clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
 
 # Display rows where the 'RESULT' column is empty (NaN)
 empty_result_rows = clean[clean['RESULT'].isnull()]
-print(empty_result_rows)
+print(empty_result_rows.head())
 ```
 
 From the 21 instances where `RESULT` is empty, I noticed that majority of the other columns are filled. I also observed that the only `INSPECTION_TYPE` is Compliance. This is interesting because it means that on the second inspection, we have a missing result which may indicate that someone forgot to input the result.
@@ -408,8 +415,9 @@ From the 21 instances where `RESULT` is empty, I noticed that majority of the ot
 ```{python}
 # Display rows where the 'RESULT' column is empty (NaN)
 empty_borough_rows = clean[clean['BOROUGH'].isnull()]
-print(empty_borough_rows)
+print(empty_borough_rows.head())
 ```
+
 With the 3 instances where `BOROUGH` is empty, it was weird to see both `X_COORD`, `Y_COORD`, `LATITUDE`, and `LONGITUDE` empty. There were also a bunch of other attributes that were empty (indicated by -1). Because there are very few instances to clean, you can manually clean it without using code. I find it compelling how street names are given with the zipcode but a `BOROUGH` was not inputted. 
 
 **Data Cleaning Conclusion**
@@ -463,11 +471,14 @@ Even after cleaning the data, storing the data using `arrow` is more efficient. 
 clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
 
 # Identifying invalid zip codes
-invalid_zip_codes = clean[~clean['ZIP_CODE'].apply(lambda x: str(x).isdigit() and 10000 <= int(x) <= 11697) & (data['ZIP_CODE'] != 0)]
+invalid_zip_codes = clean[~clean['ZIP_CODE'].apply(lambda x: str(x).isdigit() 
+                                                   and 10000 <= int(x) <= 11697) 
+                                                   & (data['ZIP_CODE'] != 0)]
 
 # Identifying invalid boroughs
 known_boroughs = ["Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island"]
-invalid_boroughs = clean[~clean['BOROUGH'].isin(known_boroughs) & data['BOROUGH'].notnull()]
+invalid_boroughs = clean[~clean['BOROUGH'].isin(known_boroughs) 
+                                           & data['BOROUGH'].notnull()]
 
 # Counting invalid zip codes and boroughs
 invalid_zip_codes_count = invalid_zip_codes.shape[0]
@@ -525,27 +536,27 @@ clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
 clean['passing'] = clean['RESULT'].apply(lambda x: 1 if x == 'Passed' else 0)
 
 # Chi-Squared Test for Initial Inspections
-initial_inspections = clean[clean['INSPECTION_TYPE'] == 'Initial']
-initial_contingency_table = pd.crosstab(initial_inspections['BOROUGH'], initial_inspections['passing'])
-chi2_initial, p_initial, dof_initial, expected_initial = chi2_contingency(initial_contingency_table)
+initial = clean[clean['INSPECTION_TYPE'] == 'Initial']
+initial_table = pd.crosstab(initial['BOROUGH'], initial['passing'])
+chi2_initial, p_initial, dof_initial, expected_initial = chi2_contingency(initial_table)
 
 # Chi-Squared Test for Compliance Inspections
-compliance_inspections = clean[clean['INSPECTION_TYPE'] == 'Compliance']
-compliance_contingency_table = pd.crosstab(compliance_inspections['BOROUGH'], compliance_inspections['passing'])
+compliance = clean[clean['INSPECTION_TYPE'] == 'Compliance']
+compliance_table = pd.crosstab(compliance['BOROUGH'], compliance['passing'])
 
-chi2_compliance, p_compliance, dof_compliance, expected_compliance = chi2_contingency(compliance_contingency_table)
+chi2_comp, p_comp, dof_comp, expected_comp= chi2_contingency(compliance_table)
 
 # Save the updated dataset
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 
 # Results
 print('Initial Inspections:')
-print(initial_contingency_table)
+print(initial_table)
 print(chi2_initial, p_initial)
 
 print('Compliance Inspections:')
-print(compliance_contingency_table)
-print(chi2_compliance, p_compliance)
+print(compliance_table)
+print(chi2_comp, p_comp)
 ```
 
 **Analysis** 
@@ -568,20 +579,23 @@ clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
 # Convert inspection time to datetime (if it's not already)
 # and create 'TIME_OF_DAY' category based on the hour of the inspection
 clean['INSPECTION_DATE'] = pd.to_datetime(clean['INSPECTION_DATE'])
-clean['TIME_OF_DAY'] = clean['INSPECTION_DATE'].apply(lambda x: 'Morning' if x.hour < 12 else 'Afternoon')
+clean['TIME_OF_DAY'] = clean['INSPECTION_DATE'].apply(lambda x: 'Morning' 
+                                                      if x.hour < 12 
+                                                      else 'Afternoon')
 
 # Define your criteria for 'passing' and categorize the 'passing' column
 clean['passing'] = clean['RESULT'].apply(lambda x: 1 if x == 'Passed' else 0)
 
 # Calculate the passing rate by borough, inspection type, and time of day
-passing_rate_comparison = clean.groupby(['BOROUGH', 'INSPECTION_TYPE', 'TIME_OF_DAY'])['passing'].mean().reset_index()
+pass_rate_comparison = clean.groupby(['BOROUGH', 'INSPECTION_TYPE', 
+                                         'TIME_OF_DAY'])['passing'].mean().reset_index()
 
 # Save the updated dataset
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 
 # Visualize the passing rates
 plt.figure(figsize=(14, 7))
-sns.barplot(data=passing_rate_comparison, x='BOROUGH', y='passing', hue='TIME_OF_DAY', ci=None)
+sns.barplot(data=pass_rate_comparison, x='BOROUGH', y='passing', hue='TIME_OF_DAY', ci=None)
 plt.title('Passing Rates by Time of Day and Borough')
 plt.ylabel('Passing Rate')
 plt.xlabel('Borough')
@@ -601,7 +615,9 @@ clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
 clean['INSPECTION_DATE'] = pd.to_datetime(clean['INSPECTION_DATE'])
 
 # Create 'TIME_OF_DAY' category based on the hour of the inspection
-clean['TIME_OF_DAY'] = clean['INSPECTION_DATE'].dt.hour.apply(lambda x: 'Morning' if x < 12 else 'Afternoon')
+clean['TIME_OF_DAY'] = clean['INSPECTION_DATE'].dt.hour.apply(lambda x: 'Morning' 
+                                                              if x < 12 
+                                                              else 'Afternoon')
 
 # Define criteria for 'passing'
 clean['passing'] = clean['RESULT'].apply(lambda x: 1 if x == 'Passed' else 0)
@@ -657,18 +673,23 @@ initial_inspections = clean[clean['INSPECTION_TYPE'] == 'Initial']
 compliance_inspections = clean[clean['INSPECTION_TYPE'] == 'Compliance']
 
 # Aggregating data for initial inspections
-n_initial = initial_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_initial')
-n_initpass = initial_inspections[initial_inspections['passing'] == 1].groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_initpass')
+n_initial = initial_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID']
+                               .count().rename('n_initial')
+n_initpass = initial_inspections[initial_inspections['passing'] == 1].groupby('ZIP_CODE')
+                                ['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_initpass')
 
 # Aggregating data for compliance inspections
-n_compliance = compliance_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_compliance')
-n_comppass = compliance_inspections[compliance_inspections['passing'] == 1].groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_comppass')
+n_compliance = compliance_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID']
+                                    .count().rename('n_compliance')
+n_comppass = compliance_inspections[compliance_inspections['passing'] == 1].groupby('ZIP_CODE')
+                                   ['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_comppass')
 
 # Combining the results into one dataframe
-aggregated_data = pd.concat([n_initial, n_initpass, n_compliance, n_comppass], axis=1).fillna(0).reset_index()
+aggregated_data = pd.concat([n_initial, n_initpass, n_compliance, n_comppass], axis=1)
+                    .fillna(0).reset_index()
+
 aggregated_data = aggregated_data.astype(int)
 aggregated_data.head()
-
 ```
 
 **Add a variable to your dataset, `n_sighting`, which represent the number of rodent sightings from the 311 service request data in the same 2022-2023 period.**
@@ -679,12 +700,13 @@ sighting = pd.read_csv('./data/rodent_2022-2023.csv')
 n_sighting = sighting.groupby('Incident Zip')['Unique Key'].count().rename('n_sighting')
 
 # Merge this count with the aggregated dataset
-aggregated_data_with_sightings = pd.merge(aggregated_data, n_sighting, how='left', left_on='ZIP_CODE', right_index=True)
+aggregated_sightings = pd.merge(aggregated_data, n_sighting, how='left', 
+                                left_on='ZIP_CODE', right_index=True)
 
 # Fill NaN values with 0 for zip codes with no recorded sightings
-aggregated_data_with_sightings['n_sighting'] = aggregated_data_with_sightings['n_sighting'].fillna(0).astype(int)
+aggregated_sightings['n_sighting'] = aggregated_sightings['n_sighting'].fillna(0).astype(int)
 
-aggregated_data_with_sightings.head()
+aggregated_sightings.head()
 ```
 
 **Merge your dataset with the simple zipcode table in package `uszipcode` by zipcode to obtain demographic and socioeconomic variables at the zipcode level.**
@@ -697,7 +719,11 @@ def fetch_zipcode_data(zip_code):
     return zipcode_info.to_dict() if zipcode_info else None
 
 # Fetching data for each unique zip code in the aggregated dataset
-zipcode_data = [fetch_zipcode_data(zip_code) for zip_code in aggregated_data_with_sightings['ZIP_CODE'].unique()]
+zipcode_data = []
+for zip_code in aggregated_sightings['ZIP_CODE']:
+    data = fetch_zipcode_data(zip_code)
+    if data:
+        zipcode_data.append(data)
 
 # Remove None entries from the data
 zipcode_data = [z for z in zipcode_data if z]
@@ -705,7 +731,14 @@ zipcode_data = [z for z in zipcode_data if z]
 # Creating a DataFrame from the fetched data
 zipcode_df = pd.DataFrame(zipcode_data)
 
-zipcode_df.head()
+def pretty_print(df, max_row=10, max_col=5):
+    # Choose which columns to display
+    df = df.iloc[:, :max_col]  # Limiting the number of columns to the first 5
+    # Use a more compact floating point representation if needed
+    with pd.option_context('display.float_format', '{:0.2f}'.format):
+        print(df.head(max_row))
+
+pretty_print(zipcode_df)
 ```
 
 **Build a binomial regression for the passing rate of initial inspections at the zipcode level. Assess the goodness-of-fit of your model. Summarize your results to a New Yorker who is not data science savvy.**
@@ -713,18 +746,19 @@ zipcode_df.head()
 ```{python}
 # Creating the passing rate variable for initial inspections
 # The passing rate is calculated as n_initpass / n_initial
-aggregated_data_with_sightings['initial_pass_rate'] = aggregated_data_with_sightings['n_initpass'] / aggregated_data_with_sightings['n_initial']
+aggregated_sightings['initial_pass_rate'] = aggregated_sightings['n_initpass'] / 
+                                            aggregated_sightings['n_initial']
 
 # Replace NaN values and infinite values (due to division by zero) with zeros
-aggregated_data_with_sightings['initial_pass_rate'].fillna(0, inplace=True)
-aggregated_data_with_sightings.replace([float('inf'), -float('inf')], 0, inplace=True)
+aggregated_sightings['initial_pass_rate'].fillna(0, inplace=True)
+aggregated_sightings.replace([float('inf'), -float('inf')], 0, inplace=True)
 
 # Binomial regression model
 # Assuming we want to include 'n_sighting' as a predictor for the initial pass rate.
 # Additional variables can be added as needed based on the available data.
-X = aggregated_data_with_sightings[['n_sighting']] # Predictor variables
+X = aggregated_sightings[['n_sighting']] # Predictor variables
 X = sm.add_constant(X) # Adding a constant term for the regression
-y = aggregated_data_with_sightings['initial_pass_rate'] # Response variable
+y = aggregated_sightings['initial_pass_rate'] # Response variable
 
 # Fit the model
 binom_model = sm.GLM(y, X, family=sm.families.Binomial())
@@ -757,6 +791,16 @@ plt.show()
    question of interest that can be answered by the data, which
    could be analytics or visualizations. Perform the needed
    analyses and answer your question.
+
+Potential Questions:
+
+- How does the density of rodent sightings (as reported through 311 service requests) correlate with the success rate of initial rodent inspections in different New York City zip codes?
+- Has the number of rodent sightings and the pass rate of inspections changed over time (monthly or yearly)?
+- Which areas (zip codes) in New York City have the highest frequency of rodent sightings and the lowest inspection pass rates?
+- How do demographic factors like population density or socioeconomic factors like average income correlate with rodent sightings?
+- Do areas with high initial inspection failure rates show improvement in compliance inspections?
+- Is there a seasonal pattern to rodent sightings and inspection outcomes?
+- 
 
 ## References 
 
