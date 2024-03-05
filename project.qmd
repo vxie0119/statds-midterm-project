@@ -647,7 +647,43 @@ From the dataframe output, if we use $\alpha$ = 0.05, we can see that Brooklyn, 
 
 **Aggregate the inspections by zip code to create a dataset with five columns. The first three columns are `zipcode`; `n_initial`, the count of the initial inspections in that zipcode; and  `n_initpass`, the number of initial inspections with a passing result in that zipcode. The other two variables are `n_compliance` and `n_comppass`, the counterpart for compliance inspections.**
 
+```{python}
+# Aggregate inspections by zip code
+
+# Filtering data for 'Initial' and 'Compliance' inspections
+initial_inspections = clean[clean['INSPECTION_TYPE'] == 'Initial']
+compliance_inspections = clean[clean['INSPECTION_TYPE'] == 'Compliance']
+
+# Aggregating data for initial inspections
+n_initial = initial_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_initial')
+n_initpass = initial_inspections[initial_inspections['passing'] == 1].groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_initpass')
+
+# Aggregating data for compliance inspections
+n_compliance = compliance_inspections.groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_compliance')
+n_comppass = compliance_inspections[compliance_inspections['passing'] == 1].groupby('ZIP_CODE')['JOB_TICKET_OR_WORK_ORDER_ID'].count().rename('n_comppass')
+
+# Combining the results into one dataframe
+aggregated_data = pd.concat([n_initial, n_initpass, n_compliance, n_comppass], axis=1).fillna(0).reset_index()
+aggregated_data = aggregated_data.astype(int)
+aggregated_data.head()
+
+```
+
 **Add a variable to your dataset, `n_sighting`, which represent the number of rodent sightings from the 311 service request data in the same 2022-2023 period.**
+```{python}
+sighting = pd.read_csv('./data/rodent_2022-2023.csv')
+
+# Count the number of rodent sightings in each zip code
+n_sighting = sighting.groupby('Incident Zip')['Unique Key'].count().rename('n_sighting')
+
+# Merge this count with the aggregated dataset
+aggregated_data_with_sightings = pd.merge(aggregated_data, n_sighting, how='left', left_on='ZIP_CODE', right_index=True)
+
+# Fill NaN values with 0 for zip codes with no recorded sightings
+aggregated_data_with_sightings['n_sighting'] = aggregated_data_with_sightings['n_sighting'].fillna(0).astype(int)
+
+aggregated_data_with_sightings.head()
+```
 
 **Merge your dataset with the simple zipcode table in package `uszipcode` by zipcode to obtain demographic and socioeconomic variables at the zipcode level.**
 
