@@ -37,6 +37,8 @@ import pandas as pd
 from scipy.stats import chi2_contingency
 import matplotlib.pyplot as plt
 import seaborn as sns
+import statsmodels.api as sm
+import numpy as np
 # Storage Packages
 import pyarrow as pa
 import pyarrow.feather as feather
@@ -686,8 +688,53 @@ aggregated_data_with_sightings.head()
 ```
 
 **Merge your dataset with the simple zipcode table in package `uszipcode` by zipcode to obtain demographic and socioeconomic variables at the zipcode level.**
+```{python}
+search = SearchEngine()
+
+# Function to fetch demographic and socioeconomic data for a given zip code
+def fetch_zipcode_data(zip_code):
+    zipcode_info = search.by_zipcode(str(zip_code))
+    return zipcode_info.to_dict() if zipcode_info else None
+
+# Fetching data for each unique zip code in the aggregated dataset
+zipcode_data = [fetch_zipcode_data(zip_code) for zip_code in aggregated_data_with_sightings['ZIP_CODE'].unique()]
+
+# Remove None entries from the data
+zipcode_data = [z for z in zipcode_data if z]
+
+# Creating a DataFrame from the fetched data
+zipcode_df = pd.DataFrame(zipcode_data)
+
+zipcode_df.head()
+```
 
 **Build a binomial regression for the passing rate of initial inspections at the zipcode level. Assess the goodness-of-fit of your model. Summarize your results to a New Yorker who is not data science savvy.**
+
+```{python}
+# Creating the passing rate variable for initial inspections
+# The passing rate is calculated as n_initpass / n_initial
+aggregated_data_with_sightings['initial_pass_rate'] = aggregated_data_with_sightings['n_initpass'] / aggregated_data_with_sightings['n_initial']
+
+# Replace NaN values and infinite values (due to division by zero) with zeros
+aggregated_data_with_sightings['initial_pass_rate'].fillna(0, inplace=True)
+aggregated_data_with_sightings.replace([float('inf'), -float('inf')], 0, inplace=True)
+
+# Binomial regression model
+# Assuming we want to include 'n_sighting' as a predictor for the initial pass rate.
+# Additional variables can be added as needed based on the available data.
+X = aggregated_data_with_sightings[['n_sighting']] # Predictor variables
+X = sm.add_constant(X) # Adding a constant term for the regression
+y = aggregated_data_with_sightings['initial_pass_rate'] # Response variable
+
+# Fit the model
+binom_model = sm.GLM(y, X, family=sm.families.Binomial())
+binom_results = binom_model.fit()
+
+# Display the summary of the model
+binom_results.summary()
+```
+
+**Visualizing the binomial model**
 
 ##  Research Question
 
