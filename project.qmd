@@ -34,14 +34,17 @@ to understand the data.
 ```{python}
 # Importing packages and dataset
 import pandas as pd
+from scipy.stats import chi2_contingency
+# Storage Packages
 import pyarrow as pa
 import pyarrow.feather as feather
 import os
+# Geospatial Packages
 from uszipcode import SearchEngine
 import warnings
 from arcgis.geocoding import reverse_geocode
 from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
 # Suppress all warnings
 warnings.filterwarnings('ignore')
@@ -382,8 +385,7 @@ for index, row in clean.iterrows():
             clean.at[index, 'STREET_NAME'] = street_name if street_name else row['STREET_NAME']
 
 # Save the updated dataset
-clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
-"""
+clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)"""
 ```
 
 - RESULT and BOROUGH: In terms of number of missing values, these two columns have very few. We can analyze them and see what is the potential issue and why it is missing.
@@ -448,14 +450,63 @@ feather_size = os.path.getsize(feather_file_path)
 original_size, feather_size
 ```
 
+Even after cleaning the data, storing the data using `arrow` is more efficient. Dropping from 104.9 MB to 67.24MB is pretty significant considering the large dataset.
 
 **Are there invalid zipcode or borough? Justify and clean them up if yes.**
 
+```{python}
+# Load the dataset
+clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
+
+# Identifying invalid zip codes
+invalid_zip_codes = clean[~clean['ZIP_CODE'].apply(lambda x: str(x).isdigit() and 10000 <= int(x) <= 11697) & (data['ZIP_CODE'] != 0)]
+
+# Identifying invalid boroughs
+known_boroughs = ["Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island"]
+invalid_boroughs = clean[~clean['BOROUGH'].isin(known_boroughs) & data['BOROUGH'].notnull()]
+
+# Counting invalid zip codes and boroughs
+invalid_zip_codes_count = invalid_zip_codes.shape[0]
+invalid_boroughs_count = invalid_boroughs.shape[0]
+
+print(f"Invalid ZIP Codes: {invalid_zip_codes_count}")
+print(f"Invalid Boroughs: {invalid_boroughs_count}")
+```
+
+We see that there are 3,239 invalid ZIP codes. This is mainly due to the fact that there are ZIP codes that have not been found. This was found to be quite challenging given that the `STREET_NAME` was an entire street so the ZIP codes may vary. It is safe to say that we do not have an invalid borough instance. 
+
+In regards to the invalid ZIP codes, we see that there are some empty ZIP codes (denoted by 0). Some of these ZIP codes are quite difficult to find because the row provides information on a whole street. With a whole street, the ZIP codes will not be constant. 
 
 
 ## Data exploration
 
 **Create binary variable `passing` indicating passing or not for the inspection result. Does `passing` depend on whether the inspection is initial or compliance? State your hypothesis and summarize your test result.**
+
+```{python}
+# Load the dataset
+clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
+
+# Define your criteria for 'passing' and categorize the 'passing' column
+clean['passing'] = clean['RESULT'].apply(lambda x: 1 if x == 'Passed' else 0)
+
+# Create a contingency table
+contingency_table = pd.crosstab(clean['passing'], clean['INSPECTION_TYPE'])
+
+# Perform the Chi-Squared Test
+chi2, p, dof, expected = chi2_contingency(contingency_table)
+
+# Summarize the results
+print(contingency_table)
+print(f"Chi-Squared Value: {chi2}")
+print(f"P-Value: {p}")
+```
+
+**Analysis** 
+
+| Null Hypothesis: There is no association between the `Inspection_Type` and the `Result`.
+| Alternative Hypothesis: There is an association between the `Inspection_Type` and the `Result`.
+
+Our results tell us that our Chi-Squared value is 29,443.398 with a p-value = 0.0 (we can say that p is a very small number less than 0.0001). If we are using &alpha; = 0.05, we can reject the null hypothesis and say that there is a statistically significant association between inspection type and the inspection result. It seems that the initial inspections have a higher proportion of passing results compared to compliance inspections. But, without knowing the specific criteria used to determine inspection results, we can't specify the cause of associaton.
 
 **Are the passing pattern different across different boroughs for initial inspections? How about compliance inspections? State your hypothesis and summarize your test results.**
 
