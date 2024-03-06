@@ -804,8 +804,6 @@ plt.show()
    question of interest that can be answered by the data, which
    could be analytics or visualizations. Perform the needed
    analyses and answer your question.
-
-### Questions to Answer
  
 **How do demographic factors like population density or socioeconomic factors like average income correlate with rodent sightings?**
 
@@ -862,10 +860,6 @@ We also see a negative correlation of -0.37 between `median_household_income` an
 - There are many values towards the lower end of income with a large cluster of rodent sightings. 
 - There are outliers towards this lower end with an extreme number of rodent sightings. 
 - Plot suggests a potential socioeconomic component to rodent infestations where wealthier areas have fewer sightings. 
-
-
-**Do areas with high initial inspection failure rates show improvement in compliance inspections?**
-
 
 ## References 
 
