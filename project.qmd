@@ -825,7 +825,9 @@ merged_df = pd.merge(
 
 # Step 2: Correlation Analysis
 correlation = merged_df[['n_sighting', 'population_density', 'median_household_income']].corr()
-print("Correlation Matrix:\n", correlation)
+sns.heatmap(correlation, annot=True, cmap='coolwarm')
+plt.title('Correlation Heatmap')
+plt.show()
 
 # Step 3: Visualization
 # Scatter plot for population density and rodent sightings
@@ -835,25 +837,31 @@ plt.show()
 
 # Scatter plot for average income and rodent sightings
 sns.scatterplot(x='median_household_income', y='n_sighting', data=merged_df)
-plt.title('Average Income vs. Rodent Sightings')
+plt.title('Median Household Income vs. Rodent Sightings')
 plt.show()
-
-# Step 4: Statistical Testing
-# Linear regression model for hypothesis testing
-# Dependent variable: number of sightings; 
-# Independent variables: population density and median household income
-model = ols('n_sighting ~ population_density + median_household_income', data=merged_df).fit()
-
-# Display the results of the hypothesis test
-hypothesis_test_results = model.summary()
-print(hypothesis_test_results)
-
-# Step 5: Interpretation
-# Based on the output of the correlation and plots, you would interpret the results.
-
-# Example Interpretation in non-technical terms:
-# "Areas with higher population densities seem to have more rodent sightings, which could be due to the availability of more food and shelter for rodents. On the other hand, average income does not show a clear relationship with the number of rodent sightings. This might indicate that income level is not a direct factor in rodent sightings or that other factors could be at play."
 ```
+
+From the correlation heatmap, we have three variables:
+
+1. `n_sighting`: Number of rodent sightings.
+2. `population_density`: Number of individuals living per unit of area.
+3. `median_household_income`: Median income.
+
+Between `n_sighting` and `population_density`, we see that there is a possible correlation of 0.4. It suggests that as the population density increases, the number of rodent sightings will tend to increase as well. In denser areas, they are subject to more waste production which creates more food availability for rodents. 
+
+We also see a negative correlation of -0.37 between `median_household_income` and `n_sighting`. It suggests that areas with a higher income tend to have fewer rodent sightings and in turn, fewer inspections. It could be due to a variety of factors such as better waste management, more resources for pest control, or less overcrowding.
+
+**Population Density vs. Sightings**:
+
+- There are plenty of observations that come from an area with lower population densities.
+- As mentioned before, we see the trend of sightings increase as the population density increases. 
+- There is also a wide spread of rodent sightings across all levels of population density.
+
+**Median Household Income vs. Sightings**:
+
+- There are many values towards the lower end of income with a large cluster of rodent sightings. 
+- There are outliers towards this lower end with an extreme number of rodent sightings. 
+- Plot suggests a potential socioeconomic component to rodent infestations where wealthier areas have fewer sightings. 
 
 
 **Do areas with high initial inspection failure rates show improvement in compliance inspections?**
