@@ -529,7 +529,7 @@ print(f"P-Value: {p}")
 | Null Hypothesis: There is no association between the `Inspection_Type` and the `Result`.
 | Alternative Hypothesis: There is an association between the `Inspection_Type` and the `Result`.
 
-Our results tell us that our Chi-Squared value is 29,443.398 with a p-value = 0.0 (we can say that p is a very small number less than 0.0001). If we are using $\alpha$ = 0.05, we can reject the null hypothesis and say that there is a statistically significant association between inspection type and the inspection result. It seems that the initial inspections have a higher proportion of passing results compared to compliance inspections. But, without knowing the specific criteria used to determine inspection results, we can't specify the cause of associaton.
+Our results tell us that our Chi-Squared value is 29,443.398 with a p-value = 0.0 (we can say that p is a very small number less than 0.0001). If we are using $\alpha$ = 0.05, we can reject the null hypothesis and say that there is a statistically significant association between inspection type and the inspection result. It seems that the initial inspections have a higher proportion of passing results compared to compliance inspections. But, without knowing the specific criteria used to determine inspection results, we can't specify the cause of association.
 
 **Are the passing pattern different across different boroughs for initial inspections? How about compliance inspections? State your hypothesis and summarize your test results.**
 
@@ -571,7 +571,7 @@ print(chi2_comp, p_comp)
 
 For the Initial inspections, we have a Chi-Squared value of 2880.85 and a p-value of 0.0 (assumed that it is a very small number). We can reject the null hypothesis and say that there is a statistically significant association between boroughs and passing rates for initial inspections. We can say that the passing patterns vary between boroughs.
 
-Similarly, our Compliance inspections have a Chi-Squared value of 294.33 and a p-value of 1.813E-62 (a very small number close to zero). We can also reject the null hypothesis and say that there is a statistically significant association between boroughs and passing rates. The passing patterns also very between boroughs.
+Similarly, our Compliance inspections have a Chi-Squared value of 294.33 and a p-value of 1.813E-62 (a very small number close to zero). We can also reject the null hypothesis and say that there is a statistically significant association between boroughs and passing rates. The passing patterns also vary between boroughs.
 
 These tests suggest that the location where an inspection occurs has an impact on whether or not its likely to pass.
 
@@ -761,42 +761,37 @@ for column in zipcode_df.columns:
 aggregated_sightings['initial_pass_rate'] = (aggregated_sightings['n_initpass'] / 
                                              aggregated_sightings['n_initial'])
 
-# Replace NaN values and infinite values (due to division by zero) with zeros
-aggregated_sightings['initial_pass_rate'].fillna(0, inplace=True)
-aggregated_sightings.replace([float('inf'), -float('inf')], 0, inplace=True)
+# Convert ZIP_CODE to strings in both DataFrames
+aggregated_sightings['ZIP_CODE'] = aggregated_sightings['ZIP_CODE'].astype(str)
+zipcode_df['zipcode'] = zipcode_df['zipcode'].astype(str)
 
-# Binomial regression model
-# Assuming we want to include 'n_sighting' as a predictor for the initial pass rate.
-# Additional variables can be added as needed based on the available data.
-X = aggregated_sightings[['n_sighting']] # Predictor variables
-X = sm.add_constant(X) # Adding a constant term for the regression
-y = aggregated_sightings['initial_pass_rate'] # Response variable
+# Merge the DataFrames on ZIP codes
+merged_df = pd.merge(aggregated_sightings, zipcode_df, left_on='ZIP_CODE', right_on='zipcode', how='left')
 
-# Fit the model
-binom_model = sm.GLM(y, X, family=sm.families.Binomial())
-binom_results = binom_model.fit()
+# Handle NaN or infinite values
+merged_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+merged_df.dropna(subset=['n_sighting', 'population_density', 'median_household_income', 'initial_pass_rate', 'median_home_value'], inplace=True)
 
-# Display the summary of the model
-binom_results.summary()
+# Predictor Variables
+X = merged_df[['n_sighting', 'population_density', 'median_household_income', 'median_home_value']]
+X = sm.add_constant(X)  # Adding a constant term for the regression
+
+# Response Variable
+y = merged_df['initial_pass_rate']
+
+# Fit binomial regression model
+model = sm.GLM(y, X, family=sm.families.Binomial())
+result = model.fit()
+
+# Display the results
+print(result.summary())
 ```
 
-**Visualizing the binomial model**
-```{python}
-# Plotting the binomial regression model
-plt.scatter(X['n_sighting'], y, alpha=0.5, label='Data Points')
-plt.xlabel('Number of Sightings (n_sighting)')
-plt.ylabel('Initial Pass Rate')
-plt.title('Binomial Regression Model for Initial Inspection Pass Rate')
+**Analysis:**
 
-# Generating predictions for the plot
-x_pred = np.linspace(X['n_sighting'].min(), X['n_sighting'].max(), 100)
-x_pred_with_const = sm.add_constant(x_pred)
-y_pred = binom_results.predict(x_pred_with_const)
-
-plt.plot(x_pred, y_pred, color='red', label='Fitted Model')
-plt.legend()
-plt.show()
-```
+- Pseudo R-Squ.: The value indicates the model's explanatory power. Our value of 0.002985 is very low and suggests that the model does not explain much of the variation in response variable.
+- From the coefficients table, P>|z| will explain if the predictor is statistically significant. If we use $\alpha$ = 0.05, we can say that all of the predictors are not statistically significant. This is because their p-value is greater than our $\alpha$ level.
+- In summary, our predictors do not have a significant impact on the passing rate in initial inspections. 
 
 ##  Research Question
 
