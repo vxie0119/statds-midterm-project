@@ -40,6 +40,7 @@ import seaborn as sns
 import statsmodels.api as sm
 import numpy as np
 from statsmodels.formula.api import ols
+import time
 # Storage Packages
 import pyarrow as pa
 import pyarrow.feather as feather
@@ -370,7 +371,7 @@ geolocator = Nominatim(user_agent="Project")
 def reverse_geocode(lat, lon):
     try:
         # Get location information
-        location = geolocator.reverse((lat, lon), exactly_one=True)
+        location = geolocator.reverse((lat, lon), exactly_one=True, timeout = 3)
         if location:
             address = location.raw.get('address', {})
             # Extract house number and street name
@@ -378,6 +379,10 @@ def reverse_geocode(lat, lon):
             street_name = address.get('road', None)
             return house_number, street_name
     except GeocoderTimedOut:
+        time.sleep(1)
+        return reverse_geocode(lat, lon)
+    except GeocoderServiceError as e:
+        print(f"Service Error: {e}")
         return None, None
     except Exception as e:
         print(f"Error: {e}")
@@ -398,7 +403,8 @@ for index, row in clean.iterrows():
                                                            else row['HOUSE_NUMBER']
             clean.at[index, 'STREET_NAME'] = street_name if street_name \
                                                          else row['STREET_NAME']
-        
+            time.sleep(1) # Delay between requests to avoid hitting rate limit
+            
 # Save the updated dataset
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 ```
@@ -776,7 +782,7 @@ merged_df.dropna(subset=['n_sighting', 'population_density', 'median_household_i
 # Predictor Variables
 X = merged_df[['n_sighting', 'population_density', 
                'median_household_income', 'median_home_value']]
-               
+
 X = sm.add_constant(X)  # Adding a constant term for the regression
 
 # Response Variable
