@@ -394,9 +394,9 @@ for index, row in clean.iterrows():
         if pd.notnull(row['LATITUDE']) and pd.notnull(row['LONGITUDE']):
             house_number, street_name = reverse_geocode(row['LATITUDE'], 
                                                         row['LONGITUDE'])
-            clean.at[index, 'HOUSE_NUMBER'] = house_number if house_number\ 
+            clean.at[index, 'HOUSE_NUMBER'] = house_number if house_number \
                                                            else row['HOUSE_NUMBER']
-            clean.at[index, 'STREET_NAME'] = street_name if street_name\ 
+            clean.at[index, 'STREET_NAME'] = street_name if street_name \
                                                          else row['STREET_NAME']
         
 # Save the updated dataset
@@ -774,7 +774,9 @@ merged_df.dropna(subset=['n_sighting', 'population_density', 'median_household_i
                          'initial_pass_rate', 'median_home_value'], inplace=True)
 
 # Predictor Variables
-X = merged_df[['n_sighting', 'population_density', 'median_household_income', 'median_home_value']]
+X = merged_df[['n_sighting', 'population_density', 
+               'median_household_income', 'median_home_value']]
+               
 X = sm.add_constant(X)  # Adding a constant term for the regression
 
 # Response Variable
