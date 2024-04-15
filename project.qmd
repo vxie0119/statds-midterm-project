@@ -11,7 +11,7 @@ format:
       - left=20mm
 ---
 
-# **Midterm Project: Rodents in NYC** 
+# **Midterm Project: Rodents in NYC**   
 
 [Rodents in NYC](https://en.wikipedia.org/wiki/Rats_in_New_York_City)
 are widespread, as they are in many densely populated areas. As of
@@ -150,10 +150,10 @@ merged_data['Y_COORD'] = merged_data['Y_COORD'].fillna(merged_data['ycoord'])
 merged_data['X_COORD'] = merged_data['X_COORD'].astype(int, errors='ignore')
 merged_data['Y_COORD'] = merged_data['Y_COORD'].astype(int, errors='ignore')
 
-# Fill NaN values with a placeholder (e.g., -1) and then convert to integers
+# Fill NaN values with a placeholder (e.g., 0) and then convert to integers
 # Otherwise, all of the values will have a decimal point after
-merged_data['X_COORD'] = merged_data['X_COORD'].fillna(-1).astype(int)
-merged_data['Y_COORD'] = merged_data['Y_COORD'].fillna(-1).astype(int)
+merged_data['X_COORD'] = merged_data['X_COORD'].fillna(0).astype(int)
+merged_data['Y_COORD'] = merged_data['Y_COORD'].fillna(0).astype(int)
 
 # Drop the extra columns from PLUTO
 merged_data.drop(['bbl', 'xcoord', 'ycoord'], axis=1, inplace=True)
@@ -170,13 +170,6 @@ clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
 
 # Dropping Zipcodes column
 clean.drop('Zip Codes', axis = 1, inplace = True)
-
-# Fill NaN values in ZIP_CODE column (if any) with a placeholder (e.g., -1)
-# Use an appropriate placeholder that makes sense for your data
-clean['ZIP_CODE'] = clean['ZIP_CODE'].fillna(-1)
-
-# Convert ZIP_CODE to integer
-clean['ZIP_CODE'] = clean['ZIP_CODE'].astype(int)
 
 # Save the updated dataset back to CSV
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
@@ -236,7 +229,7 @@ merged_data['Police Precincts'] = merged_data['Police Precincts'].fillna(merged_
                                                                          ['policeprct'])
 
 # Convert 'Police Precinct' to integer
-merged_data['Police Precincts'] = merged_data['Police Precincts'].fillna(-1).astype(int)
+merged_data['Police Precincts'] = merged_data['Police Precincts'].fillna(0).astype(int)
 
 # Drop the extra columns
 merged_data.drop(['Community Districts', 'City Council Districts', 'bbl', 'policeprct'],
@@ -282,11 +275,12 @@ columns_to_update = {
 }
 
 for clean_col, pluto_col in columns_to_update.items():
-    merged_data[clean_col] = merged_data[clean_col].fillna(merged_data[pluto_col])
+    # Only update cells that are NaN in the clean dataset with PLUTO dataset values
+    merged_data.loc[merged_data[clean_col].isna(), clean_col] = merged_data[pluto_col]
 
 # Convert to integers
 for col in columns_to_update.keys():
-    merged_data[col] = merged_data[col].fillna(-1).astype(int)
+    merged_data[col] = merged_data[col].fillna(0).astype(int)
 
 # Drop the extra columns from PLUTO
 merged_data.drop(['bbl', 'community board', 'council district', 
@@ -336,34 +330,35 @@ merged_data.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
 # Reload the dataframe so updates pass through
 clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
 
-# Create a SearchEngine object for looking up ZIP codes
-search = SearchEngine()
+# Ensure 'BBL' column in both DataFrames is of the same type
+clean['BBL'] = clean['BBL'].astype(str)
+pluto['bbl'] = pluto['bbl'].astype(str)
 
-# Function to look up ZIP code by latitude and longitude
-def get_zipcode(lat, lon):
-    if lat == 0.0 and lon == 0.0:
-        # Return 0 if both latitude and longitude are 0.0
-        return 0
-    result = search.by_coordinates(lat=lat, lng=lon, radius=30, returns=1)
-    if result:
-        return result[0].zipcode
-    return None
 
-# Iterate over the DataFrame rows and fill in missing ZIP codes
-for index, row in clean.iterrows():
-    # Check if ZIP_CODE is NaN, 0, or -1, and latitude/longitude are not both 0.0
-    if pd.isnull(row['ZIP_CODE']) or row['ZIP_CODE'] in [-1]:
-        if pd.notnull(row['LATITUDE']) and pd.notnull(row['LONGITUDE']):
-            zip_code = get_zipcode(row['LATITUDE'], row['LONGITUDE'])
-            clean.at[index, 'ZIP_CODE'] = zip_code
 
-# Save the updated dataset
-clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+# Merge the datasets on the 'BBL' column
+merged_data = pd.merge(clean, pluto[['bbl', 'postcode']], left_on='BBL', right_on='bbl', how='left')
+
+# Replace 'ZIP_CODE' values that are -1 or 0 with NaN to prepare for update
+merged_data['ZIP_CODE'] = merged_data['ZIP_CODE'].replace([-1, 0], pd.NA)
+
+# Update 'ZIP_CODE' in clean where it is NaN, with 'postcode' from pluto
+merged_data['ZIP_CODE'] = merged_data['ZIP_CODE'].combine_first(merged_data['postcode'])
+
+# Ensure 'ZIP_CODE' has no decimals and is of string type
+merged_data['ZIP_CODE'] = merged_data['ZIP_CODE'].astype(str)
+
+# Drop the 'bbl' and 'postcode' columns as they are no longer needed
+merged_data.drop(['bbl', 'postcode'], axis=1, inplace=True)
+
+# Save the merged dataset to a new CSV file
+merged_data.to_csv("./data/cleaned_rodent_inspection.csv", index=False)
 ```
 
 - HOUSE_NUMBER and STREET_NAME: Using the code below, we are able to take the `Latitude` and `Longitude` values to find out the `STREET_NAME` and `HOUSE_NUMBER` if those attributes are available. A warning for this code is that it takes a significant amount of time to render. Because of the very large dataset, it took roughly 10-20 minutes to render everything.
 
 ```{python}
+'''
 # Initialize the geocoder
 geolocator = Nominatim(user_agent="Project")
 
@@ -407,7 +402,9 @@ for index, row in clean.iterrows():
             
 # Save the updated dataset
 clean.to_csv('./data/cleaned_rodent_inspection.csv', index=False)
+'''
 ```
+
 
 - RESULT and BOROUGH: In terms of number of missing values, these two columns have very few. We can analyze them and see what is the potential issue and why it is missing.
 
@@ -424,7 +421,7 @@ From the 21 instances where `RESULT` is empty, I noticed that majority of the ot
 
 ```{python}
 # Display rows where the 'RESULT' column is empty (NaN)
-empty_borough_rows = clean[clean['BOROUGH'].isnull()]
+empty_borough_rows = clean[clean['BOROUGH'].isnull() | (clean['RESULT'] == 0)]
 print(empty_borough_rows.head())
 ```
 
@@ -436,8 +433,20 @@ With the 3 instances where `BOROUGH` is empty, it was weird to see both `X_COORD
 # Reload the dataframe so updates pass through
 clean = pd.read_csv("./data/cleaned_rodent_inspection.csv")
 
-# Checking for missing values in each column
-missing_info = clean.isnull().sum()
+# Define the columns where zeros should not be considered as missing data
+exclude_columns = ['BLOCK', 'LOT']
+
+# Function to check for missing values or zeros
+def missing_or_zero(series):
+    if series.name in exclude_columns:
+        # For 'BLOCK' and 'LOT', only count NaNs as missing
+        return series.isnull().sum()
+    else:
+        # For other columns, count both NaNs and zeros as missing
+        return series.isnull().sum() + (series == 0).sum()
+
+# Checking for missing values and zeros in each column, except for 'BLOCK' and 'LOT'
+missing_info = clean.apply(missing_or_zero)
 
 # Summarizing the missing information
 missing_info_summary = missing_info[missing_info > 0].sort_values(ascending=False)
@@ -480,15 +489,25 @@ Even after cleaning the data, storing the data using `arrow` is more efficient. 
 # Load the dataset
 clean = pd.read_csv('./data/cleaned_rodent_inspection.csv')
 
+# Function to check if a ZIP code is valid based on New York City Neighborhoods
+def is_valid_zip(zip_code):
+    try:
+        zip_int = int(float(zip_code))  # Convert to integer to remove any decimals
+        return ((10001 <= zip_int <= 10282) or  # Manhattan
+                (10301 <= zip_int <= 10314) or  # Staten Island
+                (10451 <= zip_int <= 10475) or  # Bronx
+                (11004 <= zip_int <= 11109) or  # Queens
+                (11351 <= zip_int <= 11697) or  # Queens
+                (11201 <= zip_int <= 11256))    # Brooklyn
+    except ValueError:  # Handles cases where conversion to int might fail if the input is not a number
+        return False
+
 # Identifying invalid zip codes
-invalid_zip_codes = clean[~clean['ZIP_CODE'].apply(lambda x: str(x).isdigit() 
-                                                   and 10000 <= int(x) <= 11697) 
-                                                   & (data['ZIP_CODE'] != 0)]
+invalid_zip_codes = clean[~clean['ZIP_CODE'].apply(is_valid_zip)]
 
 # Identifying invalid boroughs
 known_boroughs = ["Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island"]
-invalid_boroughs = clean[~clean['BOROUGH'].isin(known_boroughs) 
-                                           & data['BOROUGH'].notnull()]
+invalid_boroughs = clean[~clean['BOROUGH'].isin(known_boroughs) & clean['BOROUGH'].notnull()]
 
 # Counting invalid zip codes and boroughs
 invalid_zip_codes_count = invalid_zip_codes.shape[0]
